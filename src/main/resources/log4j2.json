@@ -1,0 +1,22 @@
+{
+  "configuration": {
+    "name": "ReverseProxyRobot",
+    "status": "error",
+    "appenders": {
+      "Console": {
+        "name": "STDOUT",
+        "PatternLayout": {
+          "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+        }
+      }
+    },
+    "loggers": {
+      "root": {
+        "level": "trace",
+        "AppenderRef": {
+          "ref": "STDOUT"
+        }
+      }
+    }
+  }
+}
