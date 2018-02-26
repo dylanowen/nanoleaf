@@ -3,12 +3,29 @@
     "name": "ReverseProxyRobot",
     "status": "error",
     "appenders": {
-      "Console": {
-        "name": "STDOUT",
-        "PatternLayout": {
-          "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+      "appender": [
+        {
+          "type": "Console",
+          "name": "STDOUT",
+          "PatternLayout": {
+            "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+          }
+        },
+        {
+          "type": "File",
+          "name": "MDNS",
+          "fileName": "logs/mdns.log",
+          "append": false,
+          "RegexFilter": {
+            "regex": ".*SocketException when joining group.*",
+            "onMatch": "DENY",
+            "onMismatch": "ACCEPT"
+          },
+          "PatternLayout": {
+            "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+          }
         }
-      }
+      ]
     },
     "loggers": {
       "root": {
@@ -16,7 +33,25 @@
         "AppenderRef": {
           "ref": "STDOUT"
         }
-      }
+      },
+      "logger": [
+        {
+          "name": "net.straylightlabs.hola",
+          "additivity": false,
+          "level": "warn",
+          "AppenderRef": {
+            "ref": "MDNS"
+          }
+        },
+        {
+          "name": "com.dylowen.mdns",
+          "additivity": false,
+          "level": "info",
+          "AppenderRef": {
+            "ref": "MDNS"
+          }
+        }
+      ]
     }
   }
 }

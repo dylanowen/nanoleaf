@@ -16,10 +16,10 @@ import scala.concurrent.Future
   * @author dylan.owen
   * @since Feb-2018
   */
-object GetDevices extends UnifiRPCJsonSupport with DeviceJsonSupport {
+object GetClients extends UnifiRPCJsonSupport with ClientJsonSupport {
 
   def apply(auth: UnifiAuthorization, site: String = "default")
-           (implicit nanoSystem: NanoSystem): Future[Seq[Device]] = {
+           (implicit nanoSystem: NanoSystem): Future[Seq[Client]] = {
     import nanoSystem.{actorSystem, executionContext, materializer}
 
     val request: HttpRequest = auth.request(path = "/api/s/default/stat/sta")
@@ -30,10 +30,7 @@ object GetDevices extends UnifiRPCJsonSupport with DeviceJsonSupport {
       })
       .map((rpcJson: UnifiRPCJson) => {
         rpcJson.data match {
-          case JsArray(elements) => elements.map(v => {
-            //println(v)
-            v.convertTo[Device]
-          })
+          case JsArray(elements) => elements.map(_.convertTo[Client])
           case _ => Json.deserializationError("expected an array")
         }
       })

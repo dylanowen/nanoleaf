@@ -10,6 +10,7 @@ import com.dylowen.nanoleaf.NanoSystem
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -19,41 +20,41 @@ import scala.language.postfixOps
   * @author dylan.owen
   * @since Feb-2018
   */
-object DeviceWatcher {
+object ClientWatcher {
 
-  sealed trait DeviceEvent
+  sealed trait ClientEvent
 
-  case class DeviceJoined(device: Device) extends DeviceEvent
+  case class ClientJoined(client: Client) extends ClientEvent
 
-  case class DeviceLeft(device: Device) extends DeviceEvent
+  case class ClientLeft(client: Client) extends ClientEvent
 
-  private val SeenThreshold: FiniteDuration = 10 seconds
+  private val SeenThreshold: FiniteDuration = 10 minutes
 
-  def apply(deviceFilter: (Device) => Boolean,
+  def apply(deviceFilter: (Client) => Boolean,
             unifiAuthorization: UnifiAuthorization,
-            interval: FiniteDuration = 10 seconds,
+            interval: FiniteDuration = 1 minute,
             name: String = "")
-           (implicit nanoSystem: NanoSystem): Source[DeviceEvent, NotUsed] = {
-    Source.fromGraph(new DeviceWatcher(deviceFilter, unifiAuthorization, interval, name))
+           (implicit nanoSystem: NanoSystem): Source[ClientEvent, NotUsed] = {
+    Source.fromGraph(new ClientWatcher(deviceFilter, unifiAuthorization, interval, name))
   }
 }
 
-private class DeviceWatcher(val deviceFilter: (Device) => Boolean,
+private class ClientWatcher(val deviceFilter: (Client) => Boolean,
                             val unifiAuthorization: UnifiAuthorization,
                             val interval: FiniteDuration,
                             name: String)
-                           (implicit nanoSystem: NanoSystem) extends GraphStage[SourceShape[DeviceWatcher.DeviceEvent]] with LazyLogging {
+                           (implicit nanoSystem: NanoSystem) extends GraphStage[SourceShape[ClientWatcher.ClientEvent]] with LazyLogging {
 
-  import DeviceWatcher._
+  import ClientWatcher._
   import nanoSystem.executionContext
 
-  private final val out: Outlet[DeviceEvent] = Outlet[DeviceEvent](s"DeviceWatcher($name).out")
+  private final val out: Outlet[ClientEvent] = Outlet[ClientEvent](s"DeviceWatcher($name).out")
 
-  override val shape: SourceShape[DeviceEvent] = SourceShape.of(out)
+  override val shape: SourceShape[ClientEvent] = SourceShape.of(out)
 
   def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new TimerGraphStageLogic(shape) {
-    private val connectedDevices: mutable.Map[String, Device] = mutable.Map()
-    private val eventQueue: mutable.Queue[DeviceEvent] = mutable.Queue()
+    private val connectedDevices: mutable.Map[String, Client] = mutable.Map()
+    private val eventQueue: mutable.Queue[ClientEvent] = mutable.Queue()
     private var downstreamWaiting: Boolean = false
 
     private val timerKey: String = "DeviceWatcher"
@@ -74,20 +75,20 @@ private class DeviceWatcher(val deviceFilter: (Device) => Boolean,
     final override protected def onTimer(key: Any): Unit = {
       val threshold: Instant = Instant.now().minusMillis(SeenThreshold.toMillis)
 
-      val future = GetDevices(unifiAuthorization)
+      val future: Future[Seq[Client]] = GetClients(unifiAuthorization)
 
       future.failed.map(logger.error("", _))
 
-      future.foreach((devices: Seq[Device]) => {
-        val currentDevices: Seq[Device] = devices
+      future.foreach((devices: Seq[Client]) => {
+        val currentDevices: Seq[Client] = devices
           .filter(_.lastSeen.isAfter(threshold))
           .filter(deviceFilter)
 
         // add new devices
-        currentDevices.foreach((device: Device) => {
+        currentDevices.foreach((device: Client) => {
           val key: String = device.mac
           if (!connectedDevices.contains(key)) {
-            val joined: DeviceJoined = DeviceJoined(device)
+            val joined: ClientJoined = ClientJoined(device)
 
             connectedDevices.put(key, device)
             eventQueue.enqueue(joined)
@@ -99,9 +100,9 @@ private class DeviceWatcher(val deviceFilter: (Device) => Boolean,
           .filterNot((key: String) => currentDevices.exists(_.mac == key))
 
         removedDevices.foreach((deviceKey: String) => {
-          val removedDevice: Device = connectedDevices.remove(deviceKey).get
+          val removedDevice: Client = connectedDevices.remove(deviceKey).get
 
-          eventQueue.enqueue(DeviceLeft(removedDevice))
+          eventQueue.enqueue(ClientLeft(removedDevice))
         })
 
         dequeue()
@@ -110,7 +111,7 @@ private class DeviceWatcher(val deviceFilter: (Device) => Boolean,
 
     private def dequeue(): Boolean = {
       if (downstreamWaiting && eventQueue.nonEmpty) {
-        val event: DeviceEvent = eventQueue.dequeue()
+        val event: ClientEvent = eventQueue.dequeue()
         downstreamWaiting = false
 
         push(out, event)

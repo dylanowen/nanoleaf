@@ -1,3 +1,4 @@
+
 name := "nanoleaf"
 
 version := "0.1"
@@ -17,7 +18,9 @@ libraryDependencies ++= Seq(
 
   "com.typesafe" % "config" % "1.3.1",
 
-  "net.straylightlabs" % "hola" % "0.2.2",
+  "net.straylightlabs" % "hola" % "0.2.2" excludeAll(
+    ExclusionRule(organization = "ch.qos.logback")
+  ),
 
   "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
   "org.apache.logging.log4j" % "log4j-api" % log4jVersion,

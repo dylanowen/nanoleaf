@@ -14,24 +14,26 @@ import scala.language.postfixOps
   * @author dylan.owen
   * @since Feb-2018
   */
-sealed case class Device(name: Option[String],
-                        mac: String,
-                     uptime: FiniteDuration,
-                     firstSeen: Instant,
-                     lastSeen: Instant)
+sealed case class Client(hostName: Option[String],
+                         mac: String,
+                         ip: Option[String],
+                         uptime: FiniteDuration,
+                         firstSeen: Instant,
+                         lastSeen: Instant)
 
-trait DeviceJsonSupport extends UtilJsonSupport {
-  implicit val deviceJsonFormat: RootJsonReader[Device] = new RootJsonReader[Device] {
+trait ClientJsonSupport extends UtilJsonSupport {
+  implicit val deviceJsonFormat: RootJsonReader[Client] = new RootJsonReader[Client] {
 
-    override def read(value: JsValue): Device = value match {
+    override def read(value: JsValue): Client = value match {
       case obj: JsObject => {
-        val name: Option[String] = fromField[Option[String]](obj, "name")
+        val hostname: Option[String] = fromField[Option[String]](obj, "hostname")
         val mac: String = fromField[String](obj, "mac")
+        val ip: Option[String] = fromField[Option[String]](obj, "ip")
         val uptime: FiniteDuration = fromField[Long](obj, "uptime") seconds
         val firstSeen: Instant = Instant.ofEpochSecond(fromField[Long](obj, "first_seen"))
         val lastSeen: Instant = Instant.ofEpochSecond(fromField[Long](obj, "last_seen"))
 
-        Device(name, mac, uptime, firstSeen, lastSeen)
+        Client(hostname, mac, ip, uptime, firstSeen, lastSeen)
       }
       case _ => deserializationError("device should be an object")
     }

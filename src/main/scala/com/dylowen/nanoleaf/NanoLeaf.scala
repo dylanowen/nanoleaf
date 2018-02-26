@@ -1,11 +1,13 @@
 package com.dylowen.nanoleaf
 
-import java.net.InetAddress
-
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import com.dylowen.unifi.{DeviceWatcher, UnifiAuthorization}
+import akka.stream.scaladsl.Flow
+import com.dylowen.house.{HousePipeline, NanoLeafState}
+import com.dylowen.nanoleaf.api.NanoLeafHouse
 import com.typesafe.scalalogging.LazyLogging
+
 
 /**
   * TODO add description
@@ -23,38 +25,53 @@ object NanoLeaf extends LazyLogging {
 
     implicit val system: NanoSystem = NanoSystem(actorSystem, materializer)
 
-    import system.executionContext
+    // construct the pipeline for running our house and start it
+    HousePipeline().run()
 
-    val source = UnifiAuthorization()
-      .map(auth => {
-        DeviceWatcher((device) => {
-          device.mac == "5c:f7:e6:9c:76:b7"
-        }, auth)
+
+
+
+    // TODO I should use ping https://stackoverflow.com/questions/11506321/how-to-ping-an-ip-address
+
+    /*
+    val source: Future[Source[ClientEvent, NotUsed]] = UnifiAuthorization()
+      .map((auth: UnifiAuthorization) => {
+        ClientWatcher(_.mac == "5c:f7:e6:9c:76:b7", auth)
       })
 
     source.failed.foreach(logger.error("couldn't auth", _))
 
-    class TestActor() extends Actor {
-      override def receive: Receive = {
-        case a => {
-          println(a)
+    Source.fromFutureSource(source)
+      .map((event: ClientEvent) => {
+        println(event)
+
+        event match {
+          case _: ClientJoined =>
+          case _: ClientLeft =>
         }
-      }
-    }
+      })
+      .to(Sink.ignore)
+      .run()
 
-    val ref = actorSystem.actorOf(Props[TestActor](new TestActor()))
+    val mdnsService: MDnsService = new MDnsService("_nanoleafapi._tcp")
 
-    import net.straylightlabs.hola.dns.Domain
-    import net.straylightlabs.hola.sd.{Query, Service}
+    mdnsService.query
+      .foreach(i => {
+        println(i)
+      })
+      */
 
+    /*
     val service: Service = Service.fromName("_nanoleafapi._tcp")
     val query: Query = Query.createFor(service, Domain.LOCAL)
 
 
 
+    query.runOnce()
 
     val instances = query.runOnceOn(InetAddress.getByName("192.168.1.15"))
     instances.stream.forEach(System.out.println(_))
+    */
 
     //Dns.resolve("Aurora-51-e6-cd.local")(actorSystem, ref)
 
