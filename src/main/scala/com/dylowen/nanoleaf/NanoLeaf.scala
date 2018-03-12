@@ -1,11 +1,8 @@
 package com.dylowen.nanoleaf
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Flow
-import com.dylowen.house.{HousePipeline, NanoLeafState}
-import com.dylowen.nanoleaf.api.NanoLeafHouse
+import com.dylowen.house.HousePipeline
 import com.typesafe.scalalogging.LazyLogging
 
 

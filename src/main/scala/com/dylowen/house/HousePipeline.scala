@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.actor.Cancellable
 import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream._
-import akka.stream.scaladsl.{Broadcast, Concat, Flow, GraphDSL, RunnableGraph, Sink, Source, ZipWith2}
+import akka.stream.scaladsl.{Broadcast, Concat, Flow, GraphDSL, RunnableGraph, Sink, Source, ZipWith2, ZipWith3}
 import com.dylowen.nanoleaf.NanoSystem
 import com.dylowen.utils._
 
@@ -29,19 +29,29 @@ object HousePipeline {
       implicit builder: GraphDSL.Builder[NotUsed] => {
         import GraphDSL.Implicits._
 
+        val lastActionSplitter: UniformFanOutShape[HouseAction, HouseAction] = builder.add(Broadcast(2, eagerCancel = true))
+
         val houseAction: FlowShape[HouseAction, HouseAction] = builder.add(HouseState()
           .via(StateToAction()))
 
-        val splitter: UniformFanOutShape[HouseAction, HouseAction] = builder.add(Broadcast(2, eagerCancel = true))
+        val currentActionSplitter: UniformFanOutShape[HouseAction, HouseAction] = builder.add(Broadcast(2, eagerCancel = true))
 
         val actionHandler: FlowShape[HouseAction, Unit] = builder.add(ActionHandler())
 
-        val joiner: FanInShape2[Unit, HouseAction, HouseAction] = builder.add(new ZipWith2((_: Unit, action: HouseAction) => action))
+        val joiner: FanInShape3[Unit, HouseAction, HouseAction, HouseAction] = builder.add(new ZipWith3((_: Unit, current: HouseAction, last: HouseAction) => {
+          if (current == NoAction) {
+            last
+          }
+          else {
+            current
+          }
+        }))
 
-        houseAction ~> splitter ~> actionHandler ~> joiner.in0
-        splitter.out(1) ~> joiner.in1
+        lastActionSplitter.out(0) ~> houseAction ~> currentActionSplitter ~> actionHandler ~> joiner.in0
+                                                              currentActionSplitter.out(1) ~> joiner.in1
+                                                                 lastActionSplitter.out(1) ~> joiner.in2
 
-        FlowShape(houseAction.in, joiner.out)
+        FlowShape(lastActionSplitter.in, joiner.out)
       }
     })
 

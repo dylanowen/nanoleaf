@@ -21,7 +21,7 @@ import scala.concurrent.duration.FiniteDuration
   * @since Jan-2018
   */
 case class NanoLeafClient(name: String, addresses: immutable.Set[InetAddress], port: Int, id: String, auth: String)
-                         (implicit nanoSystem: NanoSystem) extends UtilJsonSupport {
+                         (implicit nanoSystem: NanoSystem) extends UtilJsonSupport with NanoLeafBrightnessJsonSupport {
 
   import nanoSystem.{actorSystem, executionContext, materializer}
 
@@ -53,14 +53,13 @@ case class NanoLeafClient(name: String, addresses: immutable.Set[InetAddress], p
       .map(_.value)
   }
 
-  def brightness: Future[Int] = {
+  def brightness: Future[NanoLeafBrightness] = {
     val request: HttpRequest = HttpRequest(uri = getUri("/api/v1/<auth>/state/brightness"))
 
     Http().singleRequest(request)
       .flatMap((response: HttpResponse) => {
-        Unmarshal(response.entity).to[StateBrightness]
+        Unmarshal(response.entity).to[NanoLeafBrightness]
       })
-      .map(_.value)
   }
 
   def setBrightness(brightness: Int, duration: Option[FiniteDuration] = None): Future[Unit] = {
@@ -70,6 +69,17 @@ case class NanoLeafClient(name: String, addresses: immutable.Set[InetAddress], p
       method = HttpMethods.PUT,
       uri = getUri("/api/v1/<auth>/state"),
       entity = StateBrightnessWrapper(StateBrightness(brightness, durationSeconds))
+    )
+
+    Http().singleRequest(request)
+      .map((_: HttpResponse) => (): Unit)
+  }
+
+  def setState(on: Boolean): Future[Unit] = {
+    val request: HttpRequest = HttpRequest(
+      method = HttpMethods.PUT,
+      uri = getUri("/api/v1/<auth>/state"),
+      entity = StateOnWrapper(StateOn(on))
     )
 
     Http().singleRequest(request)

@@ -19,7 +19,12 @@ sealed case class Client(hostName: Option[String],
                          ip: Option[String],
                          uptime: FiniteDuration,
                          firstSeen: Instant,
-                         lastSeen: Instant)
+                         lastSeen: Instant) {
+  override def toString: String = {
+    val name: String = hostName.getOrElse(getClass.getSimpleName)
+    s"$name($lastSeen)"
+  }
+}
 
 trait ClientJsonSupport extends UtilJsonSupport {
   implicit val deviceJsonFormat: RootJsonReader[Client] = new RootJsonReader[Client] {

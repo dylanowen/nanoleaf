@@ -3,8 +3,8 @@ package com.dylowen.house
 import java.time.Instant
 
 import akka.NotUsed
+import akka.stream._
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, ZipWith3}
-import akka.stream.{FanInShape2, _}
 import com.dylowen.nanoleaf.NanoSystem
 import com.dylowen.unifi.Client
 
@@ -21,9 +21,9 @@ object HouseState {
 
       val tickBroadcast: UniformFanOutShape[HouseAction, HouseAction] = builder.add(Broadcast(3))
 
-      val merger: FanInShape3[Seq[Client], NanoLeafState, HouseAction, HouseState] = builder.add(new ZipWith3(HouseState.apply(_, _, _)))
+      val merger: FanInShape3[List[Client], NanoLeafState, HouseAction, HouseState] = builder.add(new ZipWith3(HouseState.apply(_, _, _)))
 
-      val clientStateFlow: FlowShape[Any, Seq[Client]] = builder.add(ClientState())
+      val clientStateFlow: FlowShape[Any, List[Client]] = builder.add(ClientState().map(_.toList))
       val nanoLeafStateFlow: FlowShape[Any, NanoLeafState] = builder.add(NanoLeafState())
 
       tickBroadcast.out(0) ~> clientStateFlow ~> merger.in0
@@ -35,4 +35,4 @@ object HouseState {
   }
 }
 
-case class HouseState(clients: Seq[Client], nanoLeafState: NanoLeafState, lastAction: HouseAction, time: Instant = Instant.now)
+case class HouseState(clients: List[Client], nanoLeafState: NanoLeafState, lastAction: HouseAction, time: Instant = Instant.now)

@@ -5,10 +5,13 @@
     "appenders": {
       "appender": [
         {
-          "type": "Console",
-          "name": "STDOUT",
+          "type": "RollingFile",
+          "name": "DEFAULT",
+          "filePattern": "logs/nanoleaf.log",
+          "append": false,
+          "SizeBasedTriggeringPolicy": { "size": "50 MB" },
           "PatternLayout": {
-            "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+            "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
           }
         },
         {
@@ -16,22 +19,17 @@
           "name": "MDNS",
           "fileName": "logs/mdns.log",
           "append": false,
-          "RegexFilter": {
-            "regex": ".*SocketException when joining group.*",
-            "onMatch": "DENY",
-            "onMismatch": "ACCEPT"
-          },
           "PatternLayout": {
-            "pattern": "%d{ISO8601} %highlight{%-5level} %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+            "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
           }
         }
       ]
     },
     "loggers": {
       "root": {
-        "level": "trace",
+        "level": "info",
         "AppenderRef": {
-          "ref": "STDOUT"
+          "ref": "DEFAULT"
         }
       },
       "logger": [
