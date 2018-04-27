@@ -20,7 +20,7 @@ object StateToAction extends LazyLogging {
     logger.info(state.toString)
 
     val minBrightnessOffset: Int = 5
-    val dimHour: Int = 20
+    val dimHour: Int = 22
 
     state match {
       // if we don't have any clients and our light is on, turn it off
@@ -34,7 +34,7 @@ object StateToAction extends LazyLogging {
         // our lights are on so check if we should dim them
         val time: ZonedDateTime = instant.atZone(ZoneId.systemDefault())
         val hour: Int = time.getHour
-        
+
         if (hour >= dimHour) {
           val minutes: Int = time.getMinute
           val max: Int = brightness.max - brightness.min - minBrightnessOffset // don't let the light get too dim

@@ -20,7 +20,7 @@ import scala.language.postfixOps
   */
 object ClientState {
 
-  val lastSeenThreshold: FiniteDuration = 5 minutes
+  val lastSeenThreshold: FiniteDuration = 6 minutes
 
   def apply()(implicit system: NanoSystem): Flow[Any, Seq[Client], NotUsed] = {
     val myClients: immutable.Set[String] = system.config.getStringList("nanoleaf.my-clients").asScala.toSet
