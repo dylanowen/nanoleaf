@@ -57,13 +57,15 @@ object UnifiAuthorization extends LazyLogging with UnifiLoginJsonSupport {
   }
 
   def apply(cookies: Seq[HttpCookie], unifiConfig: UnifiConfig): Option[UnifiAuthorization] = {
-    lazy val other: Seq[HttpCookie] = cookies.filter((cookie: HttpCookie) => cookie.name != SessionCookieName && cookie.name != CsrfCookieName)
-
     // make sure the cookies we care about exist
     for {
       sessionCookie <- cookies.find(_.name == SessionCookieName)
       csrfCookie <- cookies.find(_.name == CsrfCookieName)
-    } yield UnifiAuthorization(sessionCookie, csrfCookie, other, unifiConfig)
+    } yield {
+      val other: Seq[HttpCookie] = cookies.filter((cookie: HttpCookie) => cookie.name != SessionCookieName && cookie.name != CsrfCookieName)
+
+      UnifiAuthorization(sessionCookie, csrfCookie, other, unifiConfig)
+    }
   }
 }
 

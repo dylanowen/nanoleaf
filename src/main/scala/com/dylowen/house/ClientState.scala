@@ -20,14 +20,14 @@ import scala.language.postfixOps
   */
 object ClientState {
 
-  val lastSeenThreshold: FiniteDuration = 6 minutes
+  val lastSeenThreshold: FiniteDuration = 7 minutes
 
   def apply()(implicit system: NanoSystem): Flow[Any, Seq[Client], NotUsed] = {
     val myClients: immutable.Set[String] = system.config.getStringList("nanoleaf.my-clients").asScala.toSet
 
     Flow[Any]
       .mapAsync(1)((_: Any) => UnifiAuthorization())
-      .mapAsync(1)(GetClients.apply(_))
+      .mapAsync(1)(GetClients(_))
       .map((clients: Seq[Client]) => {
         // filter the clients by known clients and if they were online in the threshold time
         val lastSeenCutoff: Instant = Instant.now().minusMillis(lastSeenThreshold.toMillis)
