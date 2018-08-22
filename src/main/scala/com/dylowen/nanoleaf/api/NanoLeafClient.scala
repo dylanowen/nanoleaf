@@ -23,7 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 case class NanoLeafClient(name: String, addresses: immutable.Set[InetAddress], port: Int, id: String, auth: String)
                          (implicit nanoSystem: NanoSystem) extends UtilJsonSupport with NanoLeafBrightnessJsonSupport {
 
-  import nanoSystem.{actorSystem, executionContext, materializer}
+  import nanoSystem.{untypedSystem, executionContext, materializer}
 
   final case class StateOnWrapper(on: StateOn)
 

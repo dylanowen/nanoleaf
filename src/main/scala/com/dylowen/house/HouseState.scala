@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, ZipWith3}
 import com.dylowen.nanoleaf.NanoSystem
-import com.dylowen.unifi.Client
+import com.dylowen.unifi.WifiClient
 
 /**
   * TODO add description
@@ -14,6 +14,7 @@ import com.dylowen.unifi.Client
   * @author dylan.owen
   * @since Feb-2018
   */
+/*
 object HouseState {
   def apply()(implicit system: NanoSystem): Flow[HouseAction, HouseState, NotUsed] = {
     Flow.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] => {
@@ -36,3 +37,4 @@ object HouseState {
 }
 
 case class HouseState(clients: List[Client], nanoLeafState: NanoLeafState, lastAction: HouseAction, time: Instant = Instant.now)
+*/

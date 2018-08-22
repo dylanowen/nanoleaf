@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
   * @author dylan.owen
   * @since Feb-2018
   */
+/*
 object StateToAction extends LazyLogging {
 
   val initialValue: HouseAction = NoAction
@@ -50,4 +51,4 @@ object StateToAction extends LazyLogging {
       case _ => NoAction
     }
   })
-}
+}*/

@@ -1,9 +1,18 @@
 package com.dylowen.nanoleaf
 
-import akka.actor.ActorSystem
+import akka.actor.typed.ActorRef
 import akka.stream.ActorMaterializer
-import com.dylowen.house.HousePipeline
+import akka.{actor => untyped}
 import com.typesafe.scalalogging.LazyLogging
+import io.circe.generic.auto._
+import akka.actor.typed.scaladsl.adapter._
+import com.dylowen.unifi.{ClientActor, GetClients, UnifiClientError, WifiClient}
+import akka.actor.typed.scaladsl.AskPattern._
+import akka.util.Timeout
+
+import scala.concurrent.duration._
+import scala.language.postfixOps
+import scala.util.Try
 
 
 /**
@@ -17,46 +26,127 @@ import com.typesafe.scalalogging.LazyLogging
 object NanoLeaf extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
-    implicit val actorSystem: ActorSystem = ActorSystem("Nanoleaf")
+    //implicit val actorSystem: ActorSystem[NanoleafService.Message] = ActorSystem(NanoleafService.behavior, "service")
+
+    implicit val untypedSystem: untyped.ActorSystem = untyped.ActorSystem("HouseManager")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-    implicit val system: NanoSystem = NanoSystem(actorSystem, materializer)
+
+    implicit val system: NanoSystem = NanoSystem(untypedSystem, materializer)
+
+    val test = untypedSystem.spawn(new ClientActor().behavior, "client")
+
+    implicit val timeout: Timeout = 30 seconds
+    implicit val scheduler = untypedSystem.scheduler
+
+    val response = test ? ((ref: ActorRef[Try[Either[UnifiClientError, Seq[WifiClient]]]]) => ClientActor.UnifiRequest(GetClients(_), ref))
+
+    import system.executionContext
+
+    response.foreach(println)
 
     // construct the pipeline for running our house and start it
-    HousePipeline().run()
-
-
-
-
-    // TODO I should use ping https://stackoverflow.com/questions/11506321/how-to-ping-an-ip-address
+    //HousePipeline().run()
 
     /*
-    val source: Future[Source[ClientEvent, NotUsed]] = UnifiAuthorization()
-      .map((auth: UnifiAuthorization) => {
-        ClientWatcher(_.mac == "5c:f7:e6:9c:76:b7", auth)
-      })
+    implicit val timeout: Timeout = 3 seconds
+    implicit val scheduler = actorSystem.scheduler
 
-    source.failed.foreach(logger.error("couldn't auth", _))
+    import actorSystem.executionContext
 
-    Source.fromFutureSource(source)
-      .map((event: ClientEvent) => {
-        println(event)
+    while (true) {
+      val result: Future[Lights] = actorSystem ? NanoleafService.GetLights
 
-        event match {
-          case _: ClientJoined =>
-          case _: ClientLeft =>
+      result.foreach(println)
+
+      Thread.sleep(5000)
+    }
+    */
+
+    //actorSystem ! NanoleafService.RefreshNetworkInterfaces
+
+
+    //implicit val actorSystem: ActorSystem = ActorSystem("Nanoleaf")
+    //implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+    //implicit val system: NanoSystem = NanoSystem(actorSystem, materializer)
+
+    //val localHost = InetAddress.getLocalHost
+
+    //actorSystem.actorOf(NanoleafServiceActor.props)
+
+    /*
+        import materializer.executionContext
+
+
+        import net.straylightlabs.hola.dns.Domain
+        val lookup = new Nothing(MulticastDNSService.DEFAULT_REGISTRATION_DOMAIN_NAME, MulticastDNSService.REGISTRATION_DOMAIN_NAME, MulticastDNSService.DEFAULT_BROWSE_DOMAIN_NAME, MulticastDNSService.BROWSE_DOMAIN_NAME, MulticastDNSService.LEGACY_BROWSE_DOMAIN_NAME)
+
+        val domains: Array[Domain] = lookup.lookupDomains
+        for (domain <- domains) {
+          System.out.println(domain)
         }
-      })
-      .to(Sink.ignore)
-      .run()
 
-    val mdnsService: MDnsService = new MDnsService("_nanoleafapi._tcp")
+        val mdns: MDnsService = new MDnsService("_nanoleafapi._tcp")
 
-    mdnsService.query
-      .foreach(i => {
-        println(i)
-      })
-      */
+
+        mdns.query
+          .foreach((instances: Set[Instance]) => {
+            println(instances)
+            instances.foreach((instance: Instance) => {
+              instance.lookupAttribute("id")
+            })
+          })
+
+
+
+
+        implicit val backend: SttpBackend[Future, Nothing] = AkkaHttpBackend()
+
+
+        sttp.get(uri"http://bdf.arcwb.com/")
+          .send()
+          .foreach((response: Response[String]) => {
+            response.body match {
+              case Right(body) => println(body)
+              case Left(errorMessage) => println(errorMessage)
+            }
+          })
+
+
+
+
+
+
+        // TODO I should use ping https://stackoverflow.com/questions/11506321/how-to-ping-an-ip-address
+
+        / *
+        val source: Future[Source[ClientEvent, NotUsed]] = UnifiAuthorization()
+          .map((auth: UnifiAuthorization) => {
+            ClientWatcher(_.mac == "5c:f7:e6:9c:76:b7", auth)
+          })
+
+        source.failed.foreach(logger.error("couldn't auth", _))
+
+        Source.fromFutureSource(source)
+          .map((event: ClientEvent) => {
+            println(event)
+
+            event match {
+              case _: ClientJoined =>
+              case _: ClientLeft =>
+            }
+          })
+          .to(Sink.ignore)
+          .run()
+
+        val mdnsService: MDnsService = new MDnsService("_nanoleafapi._tcp")
+
+        mdnsService.query
+          .foreach(i => {
+            println(i)
+          })
+          */
 
     /*
     val service: Service = Service.fromName("_nanoleafapi._tcp")

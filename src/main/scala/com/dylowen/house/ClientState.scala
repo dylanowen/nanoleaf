@@ -5,7 +5,7 @@ import java.time.Instant
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.dylowen.nanoleaf.NanoSystem
-import com.dylowen.unifi.{Client, GetClients, UnifiAuthorization}
+import com.dylowen.unifi.{WifiClient, GetClients, UnifiAuthorization}
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable
@@ -18,6 +18,7 @@ import scala.language.postfixOps
   * @author dylan.owen
   * @since Feb-2018
   */
+/*
 object ClientState {
 
   val lastSeenThreshold: FiniteDuration = 7 minutes
@@ -48,4 +49,4 @@ object ClientState {
         */
       })
   }
-}
+}*/

@@ -18,6 +18,7 @@ import scala.util.control.NonFatal
   * @author dylan.owen
   * @since Feb-2018
   */
+/*
 object HousePipeline {
   def apply()(implicit system: NanoSystem): RunnableGraph[Cancellable] = {
     import system.{executionContext, materializer}
@@ -101,3 +102,4 @@ object HousePipeline {
       .to(Sink.ignore)
   }
 }
+*/

@@ -2,11 +2,8 @@ package com.dylowen.nanoleaf.api
 
 import java.net.InetAddress
 
-import com.dylowen.mdns.MDnsService
 import com.dylowen.nanoleaf.NanoSystem
-import net.straylightlabs.hola.sd.Instance
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -19,8 +16,6 @@ import scala.util.Try
 class NanoLeafHouse()(implicit nanoSystem: NanoSystem) {
 
   import nanoSystem.executionContext
-
-  val mdns: MDnsService = new MDnsService("_nanoleafapi._tcp")
 
   def getClients: Future[NanoLeafClient] = {
     /*

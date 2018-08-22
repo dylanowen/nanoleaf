@@ -1,13 +1,13 @@
 package com.dylowen.unifi
 
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.dylowen.nanoleaf.NanoSystem
-import spray.json.JsArray
-import spray.{json => Json}
+import com.softwaremill.sttp.circe.asJson
+import com.softwaremill.sttp.{Response, SttpBackend}
+import io.circe
+import io.circe.generic.auto._
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 
 /**
@@ -16,25 +16,58 @@ import scala.concurrent.Future
   * @author dylan.owen
   * @since Feb-2018
   */
-object GetClients extends UnifiRPCJsonSupport with ClientJsonSupport {
+object GetClients extends WifiClientJsonSupport {
 
   def apply(auth: UnifiAuthorization, site: String = "default")
-           (implicit nanoSystem: NanoSystem): Future[Seq[Client]] = {
-    import nanoSystem.{actorSystem, executionContext, materializer}
+           (implicit nanoSystem: NanoSystem): Future[Either[UnifiClientError, Seq[WifiClient]]] = {
+    import nanoSystem.executionContext
 
-    val request: HttpRequest = auth.request(path = "/api/s/default/stat/sta")
+    implicit val backend: SttpBackend[Future, Nothing] = UnifiClientBackend
 
-    Http().singleRequest(request)
-      .flatMap((response: HttpResponse) => {
-        Unmarshal(response.entity).to[UnifiRPCJson]
+    auth.request(path = s"/api/s/$site/stat/sta")
+      .response(asJson[UnifiRPCJson])
+      .send()
+      .map((response: Response[Either[circe.Error, UnifiRPCJson]]) => {
+        response.body match {
+          case Right(body) => {
+            body
+              .flatMap(_.data.as[Seq[WifiClient]])
+              .left
+              .map((error: circe.Error) => {
+                UnifiClientError(
+                  message = Some("Parsing failure: " + error.toString),
+                  response = Some(response)
+                )
+              })
+          }
+          case Left(error) => Left(UnifiClientError(
+            message = Some("Request error: " + error.toString),
+            response = Some(response)
+          ))
+        }
       })
-      .map((rpcJson: UnifiRPCJson) => {
-        rpcJson.data match {
-          case JsArray(elements) => elements.map(_.convertTo[Client])
-          case _ => Json.deserializationError("expected an array")
+      .recoverWith({
+        case NonFatal(t) => {
+          Future.successful(Left(UnifiClientError(
+            message = Some("Request failed"),
+            throwable = Some(t))
+          ))
         }
       })
   }
+
+  /*
+  Http().singleRequest(request)
+    .flatMap((response: HttpResponse) => {
+      Unmarshal(response.entity).to[UnifiRPCJson]
+    })
+    .map((rpcJson: UnifiRPCJson) => {
+      rpcJson.data match {
+        case JsArray(elements) => elements.map(_.convertTo[Client])
+        case _ => Json.deserializationError("expected an array")
+      }
+    })
+*/
 }
 
 

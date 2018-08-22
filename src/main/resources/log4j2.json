@@ -1,6 +1,6 @@
 {
   "configuration": {
-    "name": "ReverseProxyRobot",
+    "name": "Nanoleaf",
     "status": "error",
     "appenders": {
       "appender": [
@@ -9,7 +9,7 @@
           "name": "DEFAULT",
           "filePattern": "logs/nanoleaf.log",
           "append": false,
-          "SizeBasedTriggeringPolicy": { "size": "50 MB" },
+          "SizeBasedTriggeringPolicy": { "size": "10 MB" },
           "PatternLayout": {
             "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
           }
@@ -27,14 +27,14 @@
     },
     "loggers": {
       "root": {
-        "level": "info",
+        "level": "debug",
         "AppenderRef": {
           "ref": "DEFAULT"
         }
       },
       "logger": [
         {
-          "name": "net.straylightlabs.hola",
+          "name": "javax.jmdns",
           "additivity": false,
           "level": "warn",
           "AppenderRef": {
@@ -42,9 +42,9 @@
           }
         },
         {
-          "name": "com.dylowen.mdns",
+          "name": "com.dylowen.nanoleaf.mdns",
           "additivity": false,
-          "level": "info",
+          "level": "debug",
           "AppenderRef": {
             "ref": "MDNS"
           }
