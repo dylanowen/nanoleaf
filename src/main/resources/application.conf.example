@@ -1,0 +1,34 @@
+nanoleaf {
+  update-interval = 1 minute
+
+  devices = {
+    // Bedroom lights
+    "00:00:00": {
+      auth = "password"
+      min-brightness = 20
+      sdim-hour = 22
+    }
+  }
+}
+
+unifi {
+  base-url = "https://unifi.local"
+  username = "integration"
+  password = "password"
+  refresh-interval = ${nanoleaf.update-interval}
+
+  clients = {
+    phones = [
+      "5c:f7:e6:00:00:00" // my iphone
+    ]
+    offline-threshold = 7 minutes
+  }
+}
+
+ssl-config {
+  trustManager = {
+    stores = [
+      { type = "PEM", path = "unifi.pem" }
+    ]
+  }
+}

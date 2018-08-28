@@ -9,16 +9,35 @@
           "name": "DEFAULT",
           "filePattern": "logs/nanoleaf.log",
           "append": false,
-          "SizeBasedTriggeringPolicy": { "size": "10 MB" },
+          "SizeBasedTriggeringPolicy": { "size": "1 MB" },
           "PatternLayout": {
             "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
           }
         },
         {
-          "type": "File",
-          "name": "MDNS",
+          "type": "RollingFile",
+          "name": "mDNS",
           "fileName": "logs/mdns.log",
+          "filePattern": "logs/mdns-%i.log",
           "append": false,
+          "DefaultRolloverStrategy": {
+            "max": 1
+          },
+          "SizeBasedTriggeringPolicy": { "size": "1 MB" },
+          "PatternLayout": {
+            "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
+          }
+        },
+        {
+          "type": "RollingFile",
+          "name": "HttpClient",
+          "fileName": "logs/client.log",
+          "filePattern": "logs/client-%i.log",
+          "append": false,
+          "DefaultRolloverStrategy": {
+            "max": 1
+          },
+          "SizeBasedTriggeringPolicy": { "size": "1 MB" },
           "PatternLayout": {
             "pattern": "%d{ISO8601} %-5level %-25logger{1}%notEmpty{ [%marker]} - %msg%throwable{20}%n"
           }
@@ -38,15 +57,47 @@
           "additivity": false,
           "level": "warn",
           "AppenderRef": {
-            "ref": "MDNS"
+            "ref": "mDNS"
           }
         },
         {
-          "name": "com.dylowen.nanoleaf.mdns",
+          "name": "com.dylowen.house.nanoleaf.mdns",
           "additivity": false,
-          "level": "debug",
+          "level": "info",
           "AppenderRef": {
-            "ref": "MDNS"
+            "ref": "mDNS"
+          }
+        },
+        {
+          "name": "io.netty",
+          "additivity": false,
+          "level": "info",
+          "AppenderRef": {
+            "ref": "HttpClient"
+          }
+        },
+        {
+          "name": "org.asynchttpclient",
+          "additivity": false,
+          "level": "info",
+          "AppenderRef": {
+            "ref": "HttpClient"
+          }
+        },
+        {
+          "name": "com.dylowen.house.unifi.UnifiClient",
+          "additivity": false,
+          "level": "info",
+          "AppenderRef": {
+            "ref": "HttpClient"
+          }
+        },
+        {
+          "name": "SSLContextBuilder",
+          "additivity": false,
+          "level": "info",
+          "AppenderRef": {
+            "ref": "HttpClient"
           }
         }
       ]
