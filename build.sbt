@@ -2,7 +2,8 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(DebianPlugin)
 
 name := "nanoleaf"
-organization in ThisBuild := "com.dylowen"
+organization := "com.dylowen"
+maintainer := "Dylan Owen"
 version := "0.1"
 
 scalaVersion := "2.12.6"
@@ -26,3 +27,7 @@ mainClass in Compile := Some("com.dylowen.house.HouseApp")
 packageSummary := "House-Controller"
 packageDescription := "House Controller"
 daemonUser in Linux := "pi"
+
+mappings in Universal += {
+  file("unifi.pem") -> "unifi.pem"
+}

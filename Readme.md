@@ -2,15 +2,15 @@
 
 # Debian Build
 1. `docker run -v $(pwd):/root --rm dylanowen/sbt-packager-debian sbt debian:packageBin`
-2. `scp target/bart-pi_0.2_all.deb pi@raspberrypi.local:~/`
+2. `scp target/nanoleaf_0.1_all.deb pi@raspberrypi.local:~/`
 3. `ssh pi@raspberrypi.local`
-4. `sudo apt install ./bart-pi_0.2_all.deb`
-5. `JAVA_OPTS="-Dbart-pi.station=12th -Dbart-pi.lines.0=RED -Dbart-pi.lines.1=YELLOW -Dbart-pi.direction=s" bash -c "bart-pi"`
+4. `sudo apt install ./nanoleaf_0.1_all.deb`
+5. `nanoleaf`
 
 # Simple Build
 `sbt assembly`
 
-# Push to Raspberry Pi
+## Push to Raspberry Pi
 1. `scp target/scala-2.12/nanoleaf-assembly-0.1.jar pi@raspberrypi.local:~/nanoleaf`
 2. `java -jar nanoleaf-assembly-0.1.jar &` to start in the background
 3. `pkill -f 'nanoleaf\-assembly'` to kill the process
