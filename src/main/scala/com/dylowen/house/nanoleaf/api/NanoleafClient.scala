@@ -3,7 +3,7 @@ package nanoleaf.api
 
 
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
-import com.dylowen.house.utils.ClientError
+import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.asynchttpclient.future.AsyncHttpClientFutureBackend
 import com.softwaremill.sttp.circe._
 import com.softwaremill.sttp.{Id, SttpBackend, sttp, _}
@@ -38,7 +38,7 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
   import NanoleafClient._
   import nanoSystem.executionContext
 
-  implicit val backend: SttpBackend[Future, Nothing] = AsyncHttpClientFutureBackend()
+  implicit val backend: SttpBackend[Future, Nothing] = ClientConfig.backend
 
   def isOn: Future[Either[ClientError, Boolean]] = {
     request(path = "/api/v1/<auth>/state/on")

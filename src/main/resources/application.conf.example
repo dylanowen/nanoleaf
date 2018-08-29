@@ -28,7 +28,11 @@ unifi {
 ssl-config {
   trustManager = {
     stores = [
-      { type = "PEM", path = "unifi.pem" }
+      {
+        type = "PEM",
+        path = "unifi.pem",
+        classpath = true
+      }
     ]
   }
 }

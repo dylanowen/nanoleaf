@@ -4,8 +4,25 @@
 1. `docker run -v $(pwd):/root --rm dylanowen/sbt-packager-debian sbt debian:packageBin`
 2. `scp target/nanoleaf_0.1_all.deb pi@raspberrypi.local:~/`
 3. `ssh pi@raspberrypi.local`
-4. `sudo apt install ./nanoleaf_0.1_all.deb`
-5. `nanoleaf`
+4. `sudo dpkg -i nanoleaf_0.1_all.deb && sudo apt-get install -f`
+
+### Uninstall
+`sudo apt-get remove nanoleaf`
+
+### Log Directory
+`/var/log/nanoleaf`
+
+### View stdout
+`sudo journalctl -u nanoleaf`
+
+### Start / Stop / Restart / Status
+`sudo systemctl start nanoleaf`
+`sudo systemctl stop nanoleaf`
+`sudo systemctl restart nanoleaf`
+`sudo systemctl status nanoleaf`
+
+### Service File
+`/etc/systemd/system/multi-user.target.wants/nanoleaf.service`
 
 # Simple Build
 `sbt assembly`

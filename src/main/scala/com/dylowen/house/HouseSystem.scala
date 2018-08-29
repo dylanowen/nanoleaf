@@ -1,7 +1,7 @@
 package com.dylowen.house
 
 import akka.actor.typed
-import akka.actor.typed.ActorSystem
+import akka.actor.typed.{ActorSystem, DispatcherSelector}
 import com.dylowen.house.utils.SSLConfigUtils
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.LazyLogging
@@ -22,6 +22,9 @@ case class HouseSystem(private val _actorSystem: typed.ActorSystem[Nothing]) ext
 
   @inline
   implicit def executionContext: ExecutionContextExecutor = typedSystem.executionContext
+
+  //@inline
+  //implicit def ioExecutionContext: ExecutionContextExecutor = typedSystem.dispatchers.lookup(DispatcherSelector.fromConfig("io-dispatcher"))
 
   val config: Config = ConfigFactory.load()
 

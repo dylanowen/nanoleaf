@@ -1,16 +1,13 @@
-package com.dylowen.house
+package com.dylowen.house.utils
 
-import akka.actor.ActorSystem
-import akka.event.DummyClassForStringSources
+import com.dylowen.house.HouseSystem
 import com.softwaremill.sttp.asynchttpclient.future.AsyncHttpClientFutureBackend
 import com.softwaremill.sttp.{SttpBackend, SttpBackendOptions}
-import com.typesafe.scalalogging.LazyLogging
-import com.typesafe.sslconfig.akka.util.AkkaLoggerBridge
-import com.typesafe.sslconfig.util.{LoggerFactory, NoDepsLogger}
 import org.asynchttpclient.proxy.ProxyServer
 import org.asynchttpclient.{AsyncHttpClientConfig, DefaultAsyncHttpClientConfig}
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 /**
   * TODO add description
@@ -18,23 +15,23 @@ import scala.concurrent.Future
   * @author dylan.owen
   * @since Aug-2018
   */
-package object unifi extends LazyLogging {
+object ClientConfig {
 
   @volatile
-  private var _unifiClientBackend: Option[SttpBackend[Future, Nothing]] = None
+  private var _backend: Option[SttpBackend[Future, Nothing]] = None
 
-
-  def UnifiClientBackend(implicit nanoSystem: HouseSystem): SttpBackend[Future, Nothing] = {
-    if (_unifiClientBackend.isEmpty) {
+  def backend(implicit nanoSystem: HouseSystem): SttpBackend[Future, Nothing] = {
+    if (_backend.isEmpty) {
       synchronized({
-        if (_unifiClientBackend.isEmpty) {
+        if (_backend.isEmpty) {
+          import nanoSystem.executionContext
 
-          _unifiClientBackend = Some(AsyncHttpClientFutureBackend.usingConfig(clientConfig))
+          _backend = Some(AsyncHttpClientFutureBackend.usingConfig(clientConfig))
         }
       })
     }
 
-    _unifiClientBackend.get
+    _backend.get
   }
 
   private def clientConfig(implicit nanoSystem: HouseSystem): AsyncHttpClientConfig = {
@@ -43,6 +40,12 @@ package object unifi extends LazyLogging {
     var configBuilder: DefaultAsyncHttpClientConfig.Builder = new DefaultAsyncHttpClientConfig.Builder()
       .setConnectTimeout(options.connectionTimeout.toMillis.toInt)
       .setSslContext(nanoSystem.sslContext)
+      .setMaxConnections(8)
+      .setMaxConnectionsPerHost(4)
+      .setPooledConnectionIdleTimeout(100)
+      .setConnectionTtl(500)
+      .setConnectTimeout((60 seconds).toMillis.toInt)
+      .setIoThreadsCount(8)
 
     configBuilder = options.proxy match {
       case None => configBuilder
@@ -54,11 +57,4 @@ package object unifi extends LazyLogging {
       .setSslContext(nanoSystem.sslContext)
       .build()
   }
-
-  private final class UnifiLoggerFactory(system: ActorSystem) extends LoggerFactory {
-    override def apply(clazz: Class[_]): NoDepsLogger = new AkkaLoggerBridge(system.eventStream, clazz)
-
-    override def apply(name: String): NoDepsLogger = new AkkaLoggerBridge(system.eventStream, name, classOf[DummyClassForStringSources])
-  }
-
 }

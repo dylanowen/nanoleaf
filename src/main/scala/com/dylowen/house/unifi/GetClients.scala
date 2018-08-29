@@ -1,7 +1,7 @@
 package com.dylowen.house
 package unifi
 
-import com.dylowen.house.utils.ClientError
+import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.circe.asJson
 import com.softwaremill.sttp.{Response, SttpBackend}
 import io.circe
@@ -23,7 +23,7 @@ object GetClients extends WifiClientJsonSupport {
            (implicit nanoSystem: HouseSystem): Future[Either[ClientError, Seq[WifiClient]]] = {
     import nanoSystem.executionContext
 
-    implicit val backend: SttpBackend[Future, Nothing] = UnifiClientBackend
+    implicit val backend: SttpBackend[Future, Nothing] = ClientConfig.backend
 
     auth.request(path = s"/api/s/$site/stat/sta")
       .response(asJson[UnifiRPCJson])

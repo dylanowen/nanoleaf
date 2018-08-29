@@ -5,7 +5,7 @@ package unifi
 import java.net.URL
 import java.time.ZonedDateTime
 
-import com.dylowen.house.utils.ClientError
+import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.circe._
 import com.softwaremill.sttp.{Cookie, SttpBackend, sttp, _}
 import com.typesafe.scalalogging.LazyLogging
@@ -44,7 +44,7 @@ object UnifiAuthorization extends LazyLogging {
                   (implicit nanoSystem: HouseSystem): Future[Either[ClientError, UnifiAuthorization]] = {
     import nanoSystem.executionContext
 
-    implicit val backend: SttpBackend[Future, Nothing] = UnifiClientBackend
+    implicit val backend: SttpBackend[Future, Nothing] = ClientConfig.backend
 
     sttp.post(uri"${unifiConfig.baseUrl.toString}/api/login")
       .body(UnifiLoginJson(unifiConfig.username, unifiConfig.password))

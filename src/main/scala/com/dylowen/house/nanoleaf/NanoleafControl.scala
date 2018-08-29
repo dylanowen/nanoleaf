@@ -129,7 +129,7 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
       case (HouseState(Seq()), NanoleafState(_, true), _) => LightOff
 
       // if we turned our light off and there's a client turn it on
-      case (HouseState(Seq(_*)), NanoleafState(_, false), LightOff) => LightOn
+      case (HouseState(Seq(_, _*)), NanoleafState(_, false), LightOff) => LightOn
 
       // if our light is on check the brightness
       case (HouseState(_), NanoleafState(brightness, true), _) => {
