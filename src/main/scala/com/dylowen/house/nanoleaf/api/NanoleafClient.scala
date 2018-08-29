@@ -4,7 +4,6 @@ package nanoleaf.api
 
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
 import com.dylowen.house.utils.{ClientConfig, ClientError}
-import com.softwaremill.sttp.asynchttpclient.future.AsyncHttpClientFutureBackend
 import com.softwaremill.sttp.circe._
 import com.softwaremill.sttp.{Id, SttpBackend, sttp, _}
 import com.typesafe.scalalogging.LazyLogging
@@ -18,7 +17,7 @@ import scala.util.control.NonFatal
 /**
   * TODO add description
   *
-  * @author dylan.owen
+  * @author dylan.owen¬
   * @since Jan-2018
   */
 object NanoleafClient {

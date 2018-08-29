@@ -4,8 +4,8 @@ enablePlugins(SystemdPlugin)
 
 name := "nanoleaf"
 organization := "com.dylowen"
-maintainer := "Dylan Owen"
 version := "0.1"
+maintainer := "Dylan Owen"
 
 scalaVersion := "2.12.6"
 
@@ -21,7 +21,6 @@ libraryDependencies += Dependencies.JmDNS
 libraryDependencies ++= Dependencies.Sttp
 libraryDependencies ++= Dependencies.Circe
 libraryDependencies ++= Dependencies.Logging
-libraryDependencies ++= Dependencies.Jackson
 
 mainClass in Compile := Some("com.dylowen.house.HouseApp")
 

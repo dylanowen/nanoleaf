@@ -58,15 +58,7 @@ object Dependencies {
   lazy val Logging: Seq[ModuleID] = Seq(
     "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0",
     "org.apache.logging.log4j" % "log4j-api" % Versions.Log4j,
-    "org.apache.logging.log4j" % "log4j-api" % Versions.Log4j,
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % Versions.Log4j,
     "org.slf4j" % "slf4j-api" % Versions.Slf4j
-  )
-
-  lazy val Jackson: Seq[ModuleID] = Seq(
-    "com.fasterxml.jackson.core" % "jackson-core" % Versions.Jackson,
-    "com.fasterxml.jackson.core" % "jackson-databind" % Versions.Jackson,
-    "com.fasterxml.jackson.core" % "jackson-annotations" % Versions.Jackson,
-    "com.fasterxml.jackson.dataformat" % "jackson-dataformat-cbor" % Versions.Jackson
   )
 }
