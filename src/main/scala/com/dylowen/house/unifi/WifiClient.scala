@@ -18,12 +18,13 @@ sealed case class WifiClient(hostName: Option[String],
                              mac: String,
                              ip: Option[String],
                              uptime: FiniteDuration,
-                             `first_seen`: Instant,
-                             `last_seen`: Instant) {
+                             first_seen: Instant,
+                             last_seen: Instant,
+                             is_wired: Boolean) {
   override def toString: String = {
     val name: String = hostName
       .getOrElse(mac)
-    s"$name(${`last_seen`})"
+    s"$name($last_seen)"
   }
 }
 

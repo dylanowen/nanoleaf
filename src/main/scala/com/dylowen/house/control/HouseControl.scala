@@ -3,10 +3,7 @@ package control
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, SupervisorStrategy}
-import com.dylowen.house.nanoleaf
-import com.dylowen.house.nanoleaf.{NanoleafControl, NanoleafDispatcher}
-import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
-import com.dylowen.house.unifi.WifiClient
+import com.dylowen.house.nanoleaf.NanoleafDispatcher
 import com.dylowen.house.utils._
 import com.typesafe.scalalogging.LazyLogging
 
@@ -27,7 +24,7 @@ object HouseControl {
 
   private case object Tick extends Msg
 
-  private case class SetWifiClients(response: Seq[WifiClient]) extends Msg
+  private case class SetWifiClients(response: ActiveClients) extends Msg
 
 }
 
@@ -45,7 +42,7 @@ class HouseControl(implicit system: HouseSystem) extends LazyLogging {
       timers.startPeriodicTimer(TickInterval, Tick, TickInterval)
 
       Behaviors.setup((setup: ActorContext[Msg]) => {
-        val clientsMapper: ActorRef[Seq[WifiClient]] = setup
+        val clientsMapper: ActorRef[ActiveClients] = setup
           .messageAdapter(SetWifiClients)
 
         // create our clients watcher
@@ -54,9 +51,14 @@ class HouseControl(implicit system: HouseSystem) extends LazyLogging {
         // create our nanoleaf dispatcher
         val nanoleaf: ActorRef[NanoleafDispatcher.Msg] = setup.spawn(nanoleafDispatcher.behavior, "nanoleaf-dispatcher")
 
-        def withState(clients: Seq[WifiClient]): Behavior[Msg] = Behaviors.receiveMessagePartial({
+        def withState(clients: ActiveClients, lastClients: ActiveClients): Behavior[Msg] = Behaviors.receiveMessagePartial({
           case Tick => {
-            val state: HouseState = HouseState(clients)
+            val state: HouseState = HouseState(
+              clients.phones,
+              clients.wirelessClients,
+              lastClients.phones,
+              lastClients.wirelessClients
+            )
 
             logger.debug(s"House State: $state")
 
@@ -65,11 +67,11 @@ class HouseControl(implicit system: HouseSystem) extends LazyLogging {
             Behaviors.same
           }
           case SetWifiClients(nextClients) => {
-            withState(nextClients)
+            withState(nextClients, clients)
           }
         })
 
-        withState(Seq())
+        withState(ActiveClients(), ActiveClients())
       })
     })
   ).onFailure(SupervisorStrategy.restart)

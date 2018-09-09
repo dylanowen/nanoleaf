@@ -2,6 +2,8 @@ package com.dylowen.house.nanoleaf
 
 import java.time.Instant
 
+import com.dylowen.house.unifi.WifiClient
+
 /**
   * TODO add description
   *
@@ -19,5 +21,9 @@ case object NoAction extends NanoleafAction {
 case object LightOn extends NanoleafAction
 
 case object LightOff extends NanoleafAction
+
+case class NotifyNewPhone(wifiClients: Seq[WifiClient]) extends NanoleafAction
+
+case class NotifyNewClients(wifiClients: Seq[WifiClient]) extends NanoleafAction
 
 case class LightBrightness(brightness: Int) extends NanoleafAction

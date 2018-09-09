@@ -5,8 +5,8 @@ import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
-import com.dylowen.house.control.HouseState
-import com.dylowen.house.nanoleaf.api.{NanoLeafBrightness, NanoleafClient}
+import com.dylowen.house.control.{ClientConfig, HouseState}
+import com.dylowen.house.nanoleaf.api._
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
 import com.dylowen.house.utils.{ClientError, _}
 import com.typesafe.scalalogging.LazyLogging
@@ -32,6 +32,7 @@ object NanoleafControl {
 
   private case class ReceivedLightState(maybeLightState: Option[NanoleafState]) extends Msg
 
+  private val NewClientDuration: Int = 15
 }
 
 class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
@@ -40,6 +41,14 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
   import system.executionContext
 
   private val UpdateInterval: FiniteDuration = system.config.getFiniteDuration("nanoleaf.update-interval")
+
+  private val myPhonesEffects: Map[String, EffectCommand] = ClientConfig.configs(system.config.getConfig("clients.phones"))
+    .map((entry: (String, ClientConfig)) => {
+      entry._1 -> DefinedEffect(entry._2.effect)
+          .copy(duration = Some(NewClientDuration))
+    })
+  private val unknownClientEffect: EffectCommand = DefinedEffect(ClientConfig(system.config.getConfig("clients.unknown-client")).effect)
+    .copy(duration = Some(NewClientDuration))
 
   def behavior(address: NanoleafAddress): Behavior[Msg] = {
     val config: NanoleafConfig = NanoleafConfig(system.config.getConfig(s"""nanoleaf.devices."${address.id}""""))
@@ -106,7 +115,7 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
   }
 
   private def getLightState(client: NanoleafClient): Future[Option[NanoleafState]] = {
-    val brightnessRequest: Future[Option[NanoLeafBrightness]] = clientRequest(_.brightness, client)
+    val brightnessRequest: Future[Option[Brightness]] = clientRequest(_.brightness, client)
     val isOnRequest: Future[Option[Boolean]] = clientRequest(_.isOn, client)
 
     for {
@@ -125,31 +134,42 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
                         lastAction: NanoleafAction,
                         config: NanoleafConfig): NanoleafAction = {
     (houseState, lightState, lastAction) match {
-      // if we don't have any clients and our light is on, turn it off
-      case (HouseState(Seq()), NanoleafState(_, true), _) => LightOff
+      // if we don't have any phones and our light is on, turn it off
+      case (HouseState(Seq(), _, _, _), NanoleafState(_, true), _) => LightOff
 
-      // if we turned our light off and there's a client turn it on
-      case (HouseState(Seq(_, _*)), NanoleafState(_, false), LightOff) => LightOn
+      // if we turned our light off and there's a phone turn it on
+      case (HouseState(Seq(_, _*), _, _, _), NanoleafState(_, false), LightOff) => LightOn
 
-      // if our light is on check the brightness
-      case (HouseState(_), NanoleafState(brightness, true), _) => {
-        val dimHour: Int = config.dimHour
-        val now: Instant = Instant.now
-
-        // our lights are on so check if we should dim them
-        val time: ZonedDateTime = now.atZone(ZoneId.systemDefault())
-        val hour: Int = time.getHour
-
-        if (hour >= dimHour) {
-          val minutes: Int = time.getMinute
-          val max: Int = brightness.max - brightness.min - config.minBrightness // don't let the light get too dim
-
-          val newBrightness: Int = brightness.max - ((hour - dimHour) * 60 + minutes) * max / ((24 - dimHour) * 60)
-
-          LightBrightness(newBrightness)
+      // if our light is on
+      case (_, NanoleafState(brightness, true), _) => {
+        if (houseState.newPhones.nonEmpty) {
+          // check if someone just came home
+          NotifyNewPhone(houseState.newPhones)
+        }
+        else if (houseState.newWirelessClients.nonEmpty) {
+          // check if a random wifi device just joined the network
+          NotifyNewClients(houseState.newWirelessClients)
         }
         else {
-          NoAction
+          // check the brightness
+          val dimHour: Int = config.dimHour
+          val now: Instant = Instant.now
+
+          // our lights are on so check if we should dim them
+          val time: ZonedDateTime = now.atZone(ZoneId.systemDefault())
+          val hour: Int = time.getHour
+
+          if (hour >= dimHour) {
+            val minutes: Int = time.getMinute
+            val max: Int = brightness.max - brightness.min - config.minBrightness // don't let the light get too dim
+
+            val newBrightness: Int = brightness.max - ((hour - dimHour) * 60 + minutes) * max / ((24 - dimHour) * 60)
+
+            LightBrightness(newBrightness)
+          }
+          else {
+            NoAction
+          }
         }
       }
       case _ => NoAction
@@ -161,6 +181,18 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
       case LightBrightness(brightness) => clientRequest(_.setBrightness(brightness, Some(UpdateInterval)), client)
       case LightOn => clientRequest(_.setState(true), client)
       case LightOff => clientRequest(_.setState(false), client)
+      case NotifyNewPhone(phones) => {
+        // find an effect for this phone or get a default one
+        val effect: EffectCommand = phones.headOption
+            .map(_.mac)
+            .map(myPhonesEffects)
+            .getOrElse(DefinedEffect.Default)
+
+        clientRequest(_.tempDisplay(effect), client)
+      }
+      case NotifyNewClients(_) => {
+        clientRequest(_.tempDisplay(unknownClientEffect), client)
+      }
       case _ => Future.unit
     }
 
@@ -175,14 +207,12 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
   private def clientRequest[T](request: NanoleafClient => Future[Either[ClientError, T]],
                                client: NanoleafClient): Future[Option[T]] = {
     request(client)
-      .map((response: Either[ClientError, T]) => {
-        response match {
-          case Right(t) => Some(t)
-          case Left(error) => {
-            error.logError(s"[${client.address}] client error", logger)
+      .map({
+        case Right(t) => Some(t)
+        case Left(error) => {
+          error.logError(s"[${client.address}] client error", logger)
 
-            None
-          }
+          None
         }
       })
   }

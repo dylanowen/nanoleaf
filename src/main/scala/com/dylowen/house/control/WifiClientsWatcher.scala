@@ -10,9 +10,7 @@ import com.dylowen.house.unifi.{GetClients, UnifiClient, WifiClient}
 import com.dylowen.house.utils.{ClientError, _}
 import com.typesafe.scalalogging.LazyLogging
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -30,8 +28,7 @@ object WifiClientsWatcher {
 
   private case object RefreshWifiClients extends Msg
 
-  private case class SetWifiClients(response: Option[Seq[WifiClient]]) extends Msg
-
+  private case class SetWifiClients(response: Option[ActiveClients]) extends Msg
 }
 
 class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
@@ -44,11 +41,12 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
 
   private val unifiClient: UnifiClient = new UnifiClient()
 
-  val myClients: immutable.Set[String] = system.config.getStringList("unifi.clients.phones").asScala.toSet
-  val lastSeenClientThreshold: FiniteDuration = system.config.getFiniteDuration("unifi.clients.offline-threshold")
+  val myPhones: Map[String, ClientConfig] = ClientConfig.configs(system.config.getConfig("clients.phones"))
+
+  val lastSeenClientThreshold: FiniteDuration = system.config.getFiniteDuration("clients.offline-threshold")
 
 
-  def behavior(parent: ActorRef[Seq[WifiClient]]): Behavior[Msg] = Behaviors.supervise(
+  def behavior(parent: ActorRef[ActiveClients]): Behavior[Msg] = Behaviors.supervise(
     Behaviors.withTimers((timers: TimerScheduler[Msg]) => {
       Behaviors.setup((setup: ActorContext[Msg]) => {
         val unifiClientMapper: ActorRef[UnifiResponse] = setup
@@ -59,13 +57,13 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
         // kick off our wifi client refresh
         setup.self ! RefreshWifiClients
 
-        withState(parent, Seq(), clientActor, unifiClientMapper, timers)
+        withState(parent, ActiveClients(), clientActor, unifiClientMapper, timers)
       })
     })
   ).onFailure(SupervisorStrategy.restart)
 
-  private def withState(parent: ActorRef[Seq[WifiClient]],
-                        clients: Seq[WifiClient],
+  private def withState(parent: ActorRef[ActiveClients],
+                        clients: ActiveClients,
                         clientActor: ActorRef[UnifiClient.Msg],
                         clientMapper: ActorRef[UnifiResponse],
                         timers: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receivePartial({
@@ -78,10 +76,10 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
       // schedule our next client refresh
       timers.startSingleTimer(RefreshWifiClientsInterval, RefreshWifiClients, RefreshWifiClientsInterval)
 
-      val nextClients: Seq[WifiClient] = response
+      val nextClients: ActiveClients = response
         .getOrElse({
           // if we didn't find any clients, filter our existing known ones by time
-          filterKnownCurrentClients(clients)
+          filterCurrentClients(clients.phones ++ clients.wirelessClients)
         })
 
       // tell our parent about the current clients
@@ -92,10 +90,10 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
   })
 
   private def mapClientResponse(response: UnifiResponse): Msg = {
-    val mappedResponse: Option[Seq[WifiClient]] = response match {
+    val mappedResponse: Option[ActiveClients] = response match {
       case Success(body) => body match {
         case Right(wifiClients) => {
-          val nextClients: Seq[WifiClient] = filterKnownCurrentClients(wifiClients)
+          val nextClients: ActiveClients = filterCurrentClients(wifiClients)
 
           Some(nextClients)
         }
@@ -115,15 +113,24 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
     SetWifiClients(mappedResponse)
   }
 
-  private def filterKnownCurrentClients(clients: Seq[WifiClient]): Seq[WifiClient] = {
+  private def filterCurrentClients(clients: Seq[WifiClient]): ActiveClients = {
     // filter the clients by known clients and if they were online in the threshold time
     val lastSeenCutoff: Instant = Instant.now().minusMillis(lastSeenClientThreshold.toMillis)
 
     logger.debug(s"All clients: $clients")
 
-    clients.filter((client: WifiClient) => {
-      myClients.contains(client.mac) && client.`last_seen`.isAfter(lastSeenCutoff)
-    })
+    val recentClients: Seq[WifiClient] = clients
+        .filter(_.last_seen.isAfter(lastSeenCutoff))
+
+    val phones: Seq[WifiClient] = recentClients
+      .filter((client: WifiClient) => {
+        myPhones.contains(client.mac)
+      })
+
+    val wirelessClients: Seq[WifiClient] = recentClients
+        .filterNot(_.is_wired)
+
+    ActiveClients(phones, wirelessClients)
   }
 }
 

@@ -9,6 +9,10 @@
 ### Uninstall
 `sudo apt-get remove nanoleaf`
 
+### Update
+1. `docker run -v $(pwd):/root --rm dylanowen/sbt-packager-debian sbt debian:packageBin && scp target/nanoleaf_0.1_all.deb pi@raspberrypi.local:~/`
+2. `sudo apt-get remove nanoleaf && sudo dpkg -i nanoleaf_0.1_all.deb && sudo apt-get install -f`
+
 ### Log Directory
 `/var/log/nanoleaf`
 

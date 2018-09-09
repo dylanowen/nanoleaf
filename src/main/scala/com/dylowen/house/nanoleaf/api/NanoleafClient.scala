@@ -49,9 +49,9 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
       })
   }
 
-  def brightness: Future[Either[ClientError, NanoLeafBrightness]] = {
+  def brightness: Future[Either[ClientError, Brightness]] = {
     request(path = "/api/v1/<auth>/state/brightness")
-      .response(asJson[NanoLeafBrightness])
+      .response(asJson[Brightness])
       .send()
       .clientMapError
   }
@@ -75,6 +75,20 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
       .clientRecover
   }
 
+  def tempDisplay(effect: EffectCommand): Future[Either[ClientError, Unit]] = {
+    request(Method.PUT, "/api/v1/<auth>/effects")
+      .body(WriteWrapper(effect.copy(command = "displayTemp")))
+      .send()
+      .map(mapIgnoredResponse)
+      .clientRecover
+  }
+
+  def identify: Future[Either[ClientError, Unit]] = {
+    request(Method.PUT, "/api/v1/<auth>/identify")
+      .send()
+      .map(mapIgnoredResponse)
+      .clientRecover
+  }
 
   private def mapIgnoredResponse(response: Response[String]): Either[ClientError, Unit] = {
     response.body

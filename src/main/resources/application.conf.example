@@ -1,3 +1,16 @@
+clients {
+  phones = {
+    // my iphone
+    "5c:f7:e6:00:00:00": {
+      effect: "bluegreen-random"
+    }
+  }
+  unknown-client = {
+    effect: "fire-random"
+  }
+  offline-threshold = 7 minutes
+}
+
 nanoleaf {
   update-interval = 1 minute
 
@@ -16,13 +29,6 @@ unifi {
   username = "integration"
   password = "password"
   refresh-interval = ${nanoleaf.update-interval}
-
-  clients = {
-    phones = [
-      "5c:f7:e6:00:00:00" // my iphone
-    ]
-    offline-threshold = 7 minutes
-  }
 }
 
 ssl-config {

@@ -1,6 +1,6 @@
 package com.dylowen.house.nanoleaf
 
-import com.dylowen.house.nanoleaf.api.NanoLeafBrightness
+import com.dylowen.house.nanoleaf.api.Brightness
 
 /**
   * TODO add description
@@ -8,4 +8,4 @@ import com.dylowen.house.nanoleaf.api.NanoLeafBrightness
   * @author dylan.owen
   * @since Aug-2018
   */
-case class NanoleafState(brightness: NanoLeafBrightness, on: Boolean)
+case class NanoleafState(brightness: Brightness, on: Boolean)
