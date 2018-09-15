@@ -1,4 +1,5 @@
-package com.dylowen.house.nanoleaf
+package com.dylowen.house
+package nanoleaf
 
 import java.time.Instant
 
@@ -18,7 +19,7 @@ case object NoAction extends NanoleafAction {
   override def toString: String = getClass.getSimpleName
 }
 
-case object LightOn extends NanoleafAction
+case class LightOn(wifiClients: Seq[WifiClient]) extends NanoleafAction
 
 case object LightOff extends NanoleafAction
 

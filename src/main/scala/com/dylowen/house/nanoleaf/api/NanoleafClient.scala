@@ -60,25 +60,31 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
   def setBrightness(brightness: Int, duration: Option[FiniteDuration] = None): Future[Either[ClientError, Unit]] = {
     val durationSeconds: Option[Int] = duration.map(_.toSeconds.toInt)
 
-    request(Method.PUT, "/api/v1/<auth>/state")
-      .body(StateBrightnessWrapper(StateBrightness(brightness, durationSeconds)))
-      .send()
+    request(
+      method = Method.PUT,
+      path = "/api/v1/<auth>/state",
+      more = _.body(StateBrightnessWrapper(StateBrightness(brightness, durationSeconds)))
+    ).send()
       .map(mapIgnoredResponse)
       .clientRecover
   }
 
   def setState(on: Boolean): Future[Either[ClientError, Unit]] = {
-    request(Method.PUT, "/api/v1/<auth>/state")
-      .body(StateOnWrapper(StateOn(on)))
-      .send()
+    request(
+      method = Method.PUT,
+      path = "/api/v1/<auth>/state",
+      more = _.body(StateOnWrapper(StateOn(on)))
+    ).send()
       .map(mapIgnoredResponse)
       .clientRecover
   }
 
   def tempDisplay(effect: EffectCommand): Future[Either[ClientError, Unit]] = {
-    request(Method.PUT, "/api/v1/<auth>/effects")
-      .body(WriteWrapper(effect.copy(command = "displayTemp")))
-      .send()
+    request(
+      method = Method.PUT,
+      path = "/api/v1/<auth>/effects",
+      more = _.body(WriteWrapper(effect.copy(command = "displayTemp")))
+    ).send()
       .map(mapIgnoredResponse)
       .clientRecover
   }
@@ -102,11 +108,22 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
       })
   }
 
-  private def request(method: Method = Method.GET, path: String): Request[String, Nothing] = {
+  private def request(method: Method = Method.GET,
+                      path: String): Request[String, Nothing] = {
+    request(method, path, (r: Request[String, Nothing]) => r)
+  }
+
+  private def request[T](method: Method,
+                         path: String,
+                         more: Request[String, Nothing] => Request[T, Nothing]): Request[T, Nothing] = {
     val rawUri: String = address.url + path.replace("<auth>", auth)
 
-    sttp
-      .copy[Id, String, Nothing](uri = uri"$rawUri", method = method)
+    val request: Request[T, Nothing] = more(sttp
+      .copy[Id, String, Nothing](uri = uri"$rawUri", method = method))
+
+    logger.info("Nanoleaf Request: " + request)
+
+    request
   }
 
   implicit class EnhancedFuture[T](future: Future[Either[ClientError, T]]) {

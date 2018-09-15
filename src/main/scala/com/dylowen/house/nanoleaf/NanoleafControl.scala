@@ -8,11 +8,12 @@ import akka.actor.typed.scaladsl.Behaviors
 import com.dylowen.house.control.{ClientConfig, HouseState}
 import com.dylowen.house.nanoleaf.api._
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
+import com.dylowen.house.unifi.WifiClient
 import com.dylowen.house.utils.{ClientError, _}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, _}
 import scala.util.{Failure, Success}
 
 /**
@@ -32,7 +33,22 @@ object NanoleafControl {
 
   private case class ReceivedLightState(maybeLightState: Option[NanoleafState]) extends Msg
 
-  private val NewClientDuration: Int = 15
+  // how long we play a new phone effect
+  private val NewPhoneDuration: Int = 20
+
+  // the time between requests to the nanoleaf for setting effects
+  private val EffectBufferDuration: FiniteDuration = 300 milliseconds
+
+  object NonEmpty {
+    def unapply[T](seq: Seq[T]): Option[Seq[T]] = {
+      if (seq.nonEmpty) {
+        Some(seq)
+      }
+      else {
+        None
+      }
+    }
+  }
 }
 
 class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
@@ -45,10 +61,8 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
   private val myPhonesEffects: Map[String, EffectCommand] = ClientConfig.configs(system.config.getConfig("clients.phones"))
     .map((entry: (String, ClientConfig)) => {
       entry._1 -> DefinedEffect(entry._2.effect)
-          .copy(duration = Some(NewClientDuration))
     })
   private val unknownClientEffect: EffectCommand = DefinedEffect(ClientConfig(system.config.getConfig("clients.unknown-client")).effect)
-    .copy(duration = Some(NewClientDuration))
 
   def behavior(address: NanoleafAddress): Behavior[Msg] = {
     val config: NanoleafConfig = NanoleafConfig(system.config.getConfig(s"""nanoleaf.devices."${address.id}""""))
@@ -115,8 +129,8 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
   }
 
   private def getLightState(client: NanoleafClient): Future[Option[NanoleafState]] = {
-    val brightnessRequest: Future[Option[Brightness]] = clientRequest(_.brightness, client)
-    val isOnRequest: Future[Option[Boolean]] = clientRequest(_.isOn, client)
+    val brightnessRequest: Future[Option[Brightness]] = handleResponse(client.brightness, client)
+    val isOnRequest: Future[Option[Boolean]] = handleResponse(client.isOn, client)
 
     for {
       maybeBrightness <- brightnessRequest
@@ -138,7 +152,7 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
       case (HouseState(Seq(), _, _, _), NanoleafState(_, true), _) => LightOff
 
       // if we turned our light off and there's a phone turn it on
-      case (HouseState(Seq(_, _*), _, _, _), NanoleafState(_, false), LightOff) => LightOn
+      case (HouseState(NonEmpty(phones), _, _, _), NanoleafState(_, false), LightOff) => LightOn(phones)
 
       // if our light is on
       case (_, NanoleafState(brightness, true), _) => {
@@ -178,21 +192,31 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
 
   private def actOnClient(action: NanoleafAction, client: NanoleafClient): Unit = {
     val response: Future[Any] = action match {
-      case LightBrightness(brightness) => clientRequest(_.setBrightness(brightness, Some(UpdateInterval)), client)
-      case LightOn => clientRequest(_.setState(true), client)
-      case LightOff => clientRequest(_.setState(false), client)
-      case NotifyNewPhone(phones) => {
-        // find an effect for this phone or get a default one
-        val effect: EffectCommand = phones.headOption
-            .map(_.mac)
-            .map(myPhonesEffects)
-            .getOrElse(DefinedEffect.Default)
 
-        clientRequest(_.tempDisplay(effect), client)
+      case LightBrightness(brightness) => {
+        handleResponse(client.setBrightness(brightness, Some(UpdateInterval)), client)
       }
+
+      case LightOn(phones) => handleResponse(
+        client.setState(true)
+          .andThen({
+            case _: Success[_] => announcePhones(phones, client)
+          }), client)
+
+      case LightOff => {
+        handleResponse(client.setState(false), client)
+      }
+
+      case NotifyNewPhone(phones) => {
+        announcePhones(phones, client)
+
+        Future.unit
+      }
+
       case NotifyNewClients(_) => {
-        clientRequest(_.tempDisplay(unknownClientEffect), client)
+        handleResponse(client.tempDisplay(unknownClientEffect), client)
       }
+
       case _ => Future.unit
     }
 
@@ -204,9 +228,43 @@ class NanoleafControl(implicit system: HouseSystem) extends LazyLogging {
     })
   }
 
-  private def clientRequest[T](request: NanoleafClient => Future[Either[ClientError, T]],
-                               client: NanoleafClient): Future[Option[T]] = {
-    request(client)
+  private def announcePhones(phones: Seq[WifiClient], client: NanoleafClient): Unit = {
+    // get the duration for our effects
+    val clientDuration: Int = NewPhoneDuration / phones.length
+
+    // find an effect for the phones or get a default one
+    val effects: Seq[EffectCommand] = phones
+      .map(_.mac)
+      .map(myPhonesEffects.getOrElse(_, DefinedEffect.Default))
+    //.map(_.copy(duration = Some(clientDuration)))
+
+    playEffects(effects, clientDuration, client)
+  }
+
+  private def playEffects(effects: Seq[EffectCommand],
+                          effectDuration: Int,
+                          client: NanoleafClient): Unit = {
+    if (effects.nonEmpty) {
+      val effect: EffectCommand = effects.head
+          .copy(duration = Some(effectDuration))
+
+      handleResponse(client.tempDisplay(effect), client)
+        .andThen({
+          case _ => {
+            // get our effect duration and add some buffer time
+            val waitTime: FiniteDuration = (effectDuration seconds) + EffectBufferDuration
+
+            // schedule after our head effect is done playing
+            system.typedSystem.scheduler
+              .scheduleOnce(waitTime)(playEffects(effects.tail, effectDuration, client))
+          }
+        })
+    }
+  }
+
+  private def handleResponse[T](response: Future[Either[ClientError, T]],
+                                client: NanoleafClient): Future[Option[T]] = {
+    response
       .map({
         case Right(t) => Some(t)
         case Left(error) => {

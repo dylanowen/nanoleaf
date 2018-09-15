@@ -50,6 +50,7 @@ object RandomEffect {
 
 final case class EffectCommand(command: String,
                                version: String = "1.0",
+                               // time in seconds
                                duration: Option[Int] = None,
                                animType: String,
                                colorType: Option[String] = None,

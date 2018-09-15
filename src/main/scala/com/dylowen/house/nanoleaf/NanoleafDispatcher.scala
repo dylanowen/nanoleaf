@@ -60,7 +60,7 @@ class NanoleafDispatcher(implicit system: HouseSystem) extends LazyLogging {
       // stop our removed lights
       removed
         .values
-        .foreach(ctx.stop(_))
+        .foreach(ctx.stop)
 
       if (added.nonEmpty) {
         logger.info(s"Added Nanoleaf Lights: ${added.values}")
