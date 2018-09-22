@@ -10,6 +10,18 @@ import com.dylowen.house.nanoleaf.api.{EffectCommand, Palette, RandomEffect, Ran
   * @since Sep-2018
   */
 object DefinedEffect {
+
+  val SolarizedAccentPalette = Seq(
+    Palette(45, 100, 71), // yellow
+    Palette(18, 89, 80), // orange
+    Palette(1, 79, 86), // red
+    Palette(331, 74, 83), // magenta
+    Palette(237, 45, 77), // violet
+    Palette(205, 82, 82), // blue
+    Palette(175, 74, 63), // cyan
+    Palette(68, 100, 60), // green
+  )
+
   val Default: EffectCommand = RandomEffect(
     command = "displayTemp",
     duration = Some(10),
@@ -40,6 +52,16 @@ object DefinedEffect {
       delayTime = Range(3, 7),
       brightnessRange = Range(50, 100)
     ),
+    "fire-random" -> RandomEffect(
+      palette = Seq(
+        Palette(25, 84, 90),
+        Palette(55, 80, 90),
+        Palette(13, 89, 90),
+      ),
+      transTime = Range(3, 10),
+      delayTime = Range(3, 7),
+      brightnessRange = Range(50, 100)
+    ),
     "purple-random" -> RandomEffect(
       palette = Seq(
         Palette(300, 75, 80),
@@ -51,16 +73,28 @@ object DefinedEffect {
       delayTime = Range(3, 7),
       brightnessRange = Range(50, 100)
     ),
-    "fire-random" -> RandomEffect(
+    "solarized-dark-random" -> RandomEffect(
       palette = Seq(
-        Palette(25, 84, 90),
-        Palette(55, 80, 90),
-        Palette(13, 89, 90),
-      ),
+        Palette(193, 100, 21), // base03
+        Palette(192, 90, 26), // base02
+        Palette(194, 25, 46), // base01
+        Palette(195, 23, 51), // base00
+      ) ++ SolarizedAccentPalette,
       transTime = Range(3, 10),
       delayTime = Range(3, 7),
       brightnessRange = Range(50, 100)
-    )
+    ),
+    "solarized-light-random" -> RandomEffect(
+      palette = Seq(
+        Palette(186, 13, 59), // base0
+        Palette(180, 9, 63), // base1
+        Palette(44, 11, 93), // base2
+        Palette(44, 10, 99), // base3
+      ) ++ SolarizedAccentPalette,
+      transTime = Range(3, 10),
+      delayTime = Range(3, 7),
+      brightnessRange = Range(50, 100)
+    ),
   )
 
   def apply(key: String): EffectCommand = {
