@@ -80,8 +80,8 @@ object DefinedEffect {
         Palette(194, 25, 46), // base01
         Palette(195, 23, 51), // base00
       ) ++ SolarizedAccentPalette,
-      transTime = Range(3, 10),
-      delayTime = Range(3, 7),
+      transTime = Range(5, 7),
+      delayTime = Range(10, 20),
       brightnessRange = Range(50, 100)
     ),
     "solarized-light-random" -> RandomEffect(
@@ -91,8 +91,20 @@ object DefinedEffect {
         Palette(44, 11, 93), // base2
         Palette(44, 10, 99), // base3
       ) ++ SolarizedAccentPalette,
-      transTime = Range(3, 10),
-      delayTime = Range(3, 7),
+      transTime = Range(5, 7),
+      delayTime = Range(10, 20),
+      brightnessRange = Range(50, 100)
+    ),
+    "sweater-shirt" -> RandomEffect(
+      palette = Seq(
+        Palette(0, 0, 31),
+        Palette(205, 13, 77),
+        Palette(9, 68, 60),
+        Palette(23, 59, 84),
+        Palette(34, 24, 95),
+      ),
+      transTime = Range(5, 7),
+      delayTime = Range(10, 20),
       brightnessRange = Range(50, 100)
     ),
   )

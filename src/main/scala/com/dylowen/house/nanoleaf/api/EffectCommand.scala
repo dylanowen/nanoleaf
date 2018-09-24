@@ -55,7 +55,9 @@ final case class EffectCommand(command: String,
                                animType: String,
                                colorType: Option[String] = None,
                                palette: Seq[Palette] = Seq(),
+                               // transition time between colors
                                transTime: Option[Range] = None,
+                               // dwell time between colors
                                delayTime: Option[Range] = None,
                                brightnessRange: Option[Range] = None,
                                explodeFactor: Option[Double] = None,
