@@ -117,7 +117,7 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
     // filter the clients by known clients and if they were online in the threshold time
     val lastSeenCutoff: Instant = Instant.now().minusMillis(lastSeenClientThreshold.toMillis)
 
-    logger.debug(s"All clients: $clients")
+    logger.trace(s"All clients: $clients")
 
     val recentClients: Seq[WifiClient] = clients
         .filter(_.last_seen.isAfter(lastSeenCutoff))

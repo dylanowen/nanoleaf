@@ -1,7 +1,7 @@
 package com.dylowen.house.nanoleaf
 
 import com.dylowen.house.Seq
-import com.dylowen.house.nanoleaf.api.{EffectCommand, Palette, RandomEffect, Range}
+import com.dylowen.house.nanoleaf.api._
 
 /**
   * TODO add description
@@ -11,7 +11,7 @@ import com.dylowen.house.nanoleaf.api.{EffectCommand, Palette, RandomEffect, Ran
   */
 object DefinedEffect {
 
-  val SolarizedAccentPalette = Seq(
+  val SolarizedAccentPalette: Seq[Palette] = Seq(
     Palette(45, 100, 71), // yellow
     Palette(18, 89, 80), // orange
     Palette(1, 79, 86), // red
@@ -34,6 +34,19 @@ object DefinedEffect {
     transTime = Range(3, 10),
     delayTime = Range(3, 7),
     brightnessRange = Range(50, 100)
+  )
+
+  val ManualModeOn: EffectCommand = ExplodeEffect(
+    command = "displayTemp",
+    duration = Some(2),
+    palette = Seq(
+      Palette(0, 0, 10),
+      Palette(0, 0, 20),
+      Palette(0, 0, 30),
+      Palette(0, 0, 40),
+    ),
+    transTime = Range(3, 10),
+    delayTime = Range(3, 7),
   )
 
   val Effects: Map[String, EffectCommand] = Map(

@@ -21,6 +21,7 @@ import scala.util.control.NonFatal
   * @since Jan-2018
   */
 object NanoleafClient {
+
   final case class StateOnWrapper(on: StateOn)
 
   final case class StateOn(value: Boolean)
@@ -28,6 +29,8 @@ object NanoleafClient {
   final case class StateBrightnessWrapper(brightness: StateBrightness)
 
   final case class StateBrightness(value: Int, duration: Option[Int])
+
+  final case class SelectEffect(select: String)
 
 }
 
@@ -56,6 +59,22 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
       .clientMapError
   }
 
+  def effect: Future[Either[ClientError, String]] = {
+    request(path = "/api/v1/<auth>/effects/select")
+      .response(asJson[String])
+      .send()
+      .clientMapError
+  }
+
+  def selectEffect(effect: String): Future[Either[ClientError, Unit]] = {
+    request(
+      method = Method.PUT,
+      path = "/api/v1/<auth>/effects/select",
+      more = _.body(SelectEffect(effect))
+    ).send()
+      .map(mapIgnoredResponse)
+      .clientRecover
+  }
 
   def setBrightness(brightness: Int, duration: Option[FiniteDuration] = None): Future[Either[ClientError, Unit]] = {
     val durationSeconds: Option[Int] = duration.map(_.toSeconds.toInt)

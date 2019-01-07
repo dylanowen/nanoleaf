@@ -28,3 +28,5 @@ case class NotifyNewPhone(wifiClients: Seq[WifiClient]) extends NanoleafAction
 case class NotifyNewClients(wifiClients: Seq[WifiClient]) extends NanoleafAction
 
 case class LightBrightness(brightness: Int) extends NanoleafAction
+
+case class LightEffect(effect: String) extends NanoleafAction

@@ -8,4 +8,4 @@ import com.dylowen.house.nanoleaf.api.Brightness
   * @author dylan.owen
   * @since Aug-2018
   */
-case class NanoleafState(brightness: Brightness, on: Boolean)
+case class NanoleafState(brightness: Brightness, on: Boolean, effect: String)

@@ -1,10 +1,7 @@
 package com.dylowen.house
 package nanoleaf
 
-import java.net.URL
-
 import com.dylowen.house.utils._
-import com.dylowen.house.unifi.UnifiConfig
 import com.typesafe.config.Config
 
 /**
@@ -20,9 +17,13 @@ object NanoleafConfig {
       .getOrElse(22)
     val dimHour: Int = config.optional(_.getInt)("dim-hour")
       .getOrElse(5)
+    val manualModeEffect: Option[String] = config.optional(_.getString)("manual-mode")
 
-    NanoleafConfig(auth, minBrightness, dimHour)
+    NanoleafConfig(auth, minBrightness, dimHour, manualModeEffect)
   }
 }
 
-case class NanoleafConfig(auth: String, minBrightness: Int, dimHour: Int)
+case class NanoleafConfig(auth: String,
+                          minBrightness: Int,
+                          dimHour: Int,
+                          manualMode: Option[String])

@@ -60,7 +60,7 @@ class HouseControl(implicit system: HouseSystem) extends LazyLogging {
               lastClients.wirelessClients
             )
 
-            logger.debug(s"House State: $state")
+            logger.info(s"House State: $state")
 
             nanoleaf ! NanoleafDispatcher.Tick(state)
 
