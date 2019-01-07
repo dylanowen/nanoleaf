@@ -19,13 +19,9 @@ case object NoAction extends NanoleafAction {
   override def toString: String = getClass.getSimpleName
 }
 
-case class LightOn(wifiClients: Seq[WifiClient]) extends NanoleafAction
+case object LightOn extends NanoleafAction
 
 case object LightOff extends NanoleafAction
-
-case class NotifyNewPhone(wifiClients: Seq[WifiClient]) extends NanoleafAction
-
-case class NotifyNewClients(wifiClients: Seq[WifiClient]) extends NanoleafAction
 
 case class LightBrightness(brightness: Int) extends NanoleafAction
 

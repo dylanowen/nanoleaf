@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.dylowen.house.control.HouseState
 import com.dylowen.house.nanoleaf.mdns.{NanoleafAddress, NanoleafMdnsService}
+import com.dylowen.house.utils._
 import com.typesafe.scalalogging.LazyLogging
 
 /**
@@ -29,8 +30,6 @@ object NanoleafDispatcher {
 class NanoleafDispatcher(implicit system: HouseSystem) extends LazyLogging {
 
   import NanoleafDispatcher._
-
-  private val nanoleafControl: NanoleafControl = new NanoleafControl()
 
   val behavior: Behavior[Msg] = Behaviors.setup((setup: ActorContext[Msg]) => {
     val lightAddressMapper: ActorRef[Map[String, NanoleafAddress]] = setup
@@ -59,24 +58,34 @@ class NanoleafDispatcher(implicit system: HouseSystem) extends LazyLogging {
 
       // stop our removed lights
       removed
-        .values
-        .foreach(ctx.stop)
+        .foreach((entry: (String, ActorRef[NanoleafControl.Msg])) => {
+          ctx.stop(entry._2)
 
-      if (added.nonEmpty) {
-        logger.info(s"Added Nanoleaf Lights: ${added.values}")
-      }
-      if (removed.nonEmpty) {
-        logger.info(s"Removed Nanoleaf Lights: ${removed.keys}")
-      }
+          logger.info(s"Removed Nanoleaf Light: ${entry._1}")
+        })
 
       // start our added lights
       val started: Map[String, ActorRef[NanoleafControl.Msg]] = added
-        .map((entry: (String, NanoleafAddress)) => {
+        .collect(Function.unlift((entry: (String, NanoleafAddress)) => {
           val address: NanoleafAddress = entry._2
-          val child: ActorRef[NanoleafControl.Msg] = ctx.spawn(nanoleafControl.behavior(address), s"nanoleaf-control-${address.id}")
 
-          entry._1 -> child
-        })
+          // get the config for these lights
+          val maybeConfig: Option[NanoleafConfig] = system.config
+            .optional(_.getConfig)(s"""nanoleaf.devices."${address.id}"""")
+            .map(NanoleafConfig.apply)
+
+          // only build these lights if we have a config
+          maybeConfig
+            .map((config: NanoleafConfig) => {
+              val nanoleafControl: NanoleafControl = new NanoleafControl(address, config)
+
+              val child: ActorRef[NanoleafControl.Msg] = ctx.spawn(nanoleafControl.behavior, s"nanoleaf-control-${address.id}")
+
+              logger.info(s"Added Nanoleaf Light: ${entry._1}")
+
+              entry._1 -> child
+            })
+        }))
 
       withState(kept ++ started)
     }

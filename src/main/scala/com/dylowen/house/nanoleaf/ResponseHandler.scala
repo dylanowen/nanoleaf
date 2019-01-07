@@ -26,7 +26,7 @@ trait ResponseHandler {
       .map({
         case Right(t) => Some(t)
         case Left(error) => {
-          error.logError(s"[${client.address}] client error", logger)
+          error.logError(s"client error", logger)
 
           None
         }

@@ -36,17 +36,26 @@ object DefinedEffect {
     brightnessRange = Range(50, 100)
   )
 
-  val ManualModeOn: EffectCommand = ExplodeEffect(
+  val ManualModeOn: EffectCommand = FadeEffect(
     command = "displayTemp",
     duration = Some(2),
     palette = Seq(
-      Palette(0, 0, 10),
-      Palette(0, 0, 20),
-      Palette(0, 0, 30),
-      Palette(0, 0, 40),
+      Palette(100, 95, 75),
+      Palette(100, 95, 10),
     ),
-    transTime = Range(3, 10),
-    delayTime = Range(3, 7),
+    transTime = Range(5, 5),
+    delayTime = Range(1, 1),
+  )
+
+  val ManualModeOff: EffectCommand = FadeEffect(
+    command = "displayTemp",
+    duration = Some(2),
+    palette = Seq(
+      Palette(9, 93, 75),
+      Palette(9, 93, 10),
+    ),
+    transTime = Range(5, 5),
+    delayTime = Range(1, 1),
   )
 
   val Effects: Map[String, EffectCommand] = Map(

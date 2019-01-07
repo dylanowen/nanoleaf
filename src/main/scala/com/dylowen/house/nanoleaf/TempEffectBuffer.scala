@@ -4,9 +4,11 @@ import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{Behaviors, TimerScheduler}
 import com.dylowen.house.nanoleaf.api.{EffectCommand, NanoleafClient}
 import com.dylowen.house.{HouseSystem, Seq}
-import com.typesafe.scalalogging.LazyLogging
+import com.typesafe.scalalogging.{LazyLogging, Logger}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration.{FiniteDuration, _}
+import scala.util.{Failure, Success}
 
 /**
   * A buffer for displaying temporary effects, as one right after the other isn't allowed on the device
@@ -16,78 +18,93 @@ import scala.concurrent.duration.{FiniteDuration, _}
   */
 private[nanoleaf] object TempEffectBuffer {
 
+  // the time between requests to the nanoleaf for setting effects
+  private val EffectBufferDuration: FiniteDuration = 300 milliseconds
+
   sealed trait Msg
 
   case object Ready extends Msg
 
-  case class TempEffect(effect: EffectCommand, duration: Int) extends Msg
+  sealed trait PlayMsg extends Msg
 
+  case class Wait(duration: FiniteDuration) extends PlayMsg
 
-  // the time between requests to the nanoleaf for setting effects
-  private val EffectBufferDuration: FiniteDuration = 300 milliseconds
+  val DefaultWait: Wait = Wait(EffectBufferDuration)
+
+  case class TempEffect(effect: EffectCommand, duration: Int) extends PlayMsg
 }
 
-private[nanoleaf] class TempEffectBuffer(implicit override val system: HouseSystem) extends ResponseHandler with LazyLogging {
+private[nanoleaf] class TempEffectBuffer(client: NanoleafClient)
+                                        (implicit override val system: HouseSystem) extends ResponseHandler with LazyLogging {
 
   import TempEffectBuffer._
   import system.executionContext
 
-  def behavior(client: NanoleafClient): Behavior[Msg] = {
+  override protected lazy val logger: Logger = Logger(LoggerFactory.getLogger(s"EffectBuffer[${client.address.id}]"))
+
+  def behavior: Behavior[Msg] = {
     Behaviors.withTimers((timer: TimerScheduler[Msg]) => {
-      waiting(client, timer)
+      waiting(timer)
     })
   }
 
-  private def waiting(client: NanoleafClient, timer: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receiveMessagePartial({
-    case effect: TempEffect => {
+  private def waiting(timer: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receiveMessagePartial({
+    case playMessage: PlayMsg => {
       // play the next effect
-      play(effect, client, timer)
+      play(playMessage, timer)
 
       // set ourselves to waiting to play
-      playing(Seq(), client, timer)
+      playing(Seq(), timer)
     }
     case unexpected => {
       logger.warn(s"Unexpected message: $unexpected")
 
-      waiting(client, timer)
+      waiting(timer)
     }
   })
 
-  private def playing(effects: Seq[TempEffect],
-                      client: NanoleafClient,
+  private def playing(playMessages: Seq[PlayMsg],
                       timer: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receiveMessagePartial({
-    case effect: TempEffect => {
-      playing(effects :+ effect, client, timer)
+    case playMessage: PlayMsg => {
+      playing(playMessages :+ playMessage, timer)
     }
     case Ready => {
-      if (effects.nonEmpty) {
+      if (playMessages.nonEmpty) {
         // play the next effect
-        play(effects.head, client, timer)
+        play(playMessages.head, timer)
 
         // set ourselves to waiting to play
-        playing(effects.tail, client, timer)
+        playing(playMessages.tail, timer)
       }
       else {
-        waiting(client, timer)
+        waiting(timer)
       }
     }
   })
 
-  private def play(effect: TempEffect, client: NanoleafClient, timer: TimerScheduler[Msg]): Unit = {
-    val tempEffect: EffectCommand = effect.effect
-      .copy(duration = Some(effect.duration))
+  private def play(effect: PlayMsg, timer: TimerScheduler[Msg]): Unit = {
+    effect match {
+      case effect: TempEffect => {
+        val tempEffect: EffectCommand = effect.effect
+          .copy(duration = Some(effect.duration))
 
-    handleResponse(client.tempDisplay(tempEffect), client)
-      .andThen({
-        case _ => {
-          // get our effect duration and add some buffer time
-          val waitTime: FiniteDuration = (effect.duration seconds) + EffectBufferDuration
+        handleResponse(client.tempDisplay(tempEffect), client)
+          .andThen({
+            case _ => {
+              // get our effect duration and add some buffer time
+              val waitTime: FiniteDuration = (effect.duration seconds) + EffectBufferDuration
 
-          logger.debug(s"Playing temp effect and waiting ${waitTime.toSeconds} seconds")
+              logger.debug(s"Playing temp effect and waiting ${waitTime.toSeconds} seconds")
 
-          // schedule a timer for when we can play the next effect
-          timer.startSingleTimer(Ready, Ready, waitTime)
-        }
-      })
+              // schedule a timer for when we can play the next effect
+              timer.startSingleTimer(Ready, Ready, waitTime)
+            }
+          })
+      }
+      case Wait(duration) => {
+        // schedule a timer for our wait duration
+        timer.startSingleTimer(Ready, Ready, duration)
+      }
+    }
   }
 }
