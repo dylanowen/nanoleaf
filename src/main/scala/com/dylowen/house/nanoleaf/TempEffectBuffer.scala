@@ -34,8 +34,9 @@ private[nanoleaf] object TempEffectBuffer {
   case class TempEffect(effect: EffectCommand, duration: Int) extends PlayMsg
 }
 
-private[nanoleaf] class TempEffectBuffer(client: NanoleafClient)
-                                        (implicit override val system: HouseSystem) extends ResponseHandler with LazyLogging {
+private[nanoleaf] class TempEffectBuffer(client: NanoleafClient)(implicit override val system: HouseSystem)
+    extends ResponseHandler
+    with LazyLogging {
 
   import TempEffectBuffer._
   import system.executionContext
@@ -48,39 +49,40 @@ private[nanoleaf] class TempEffectBuffer(client: NanoleafClient)
     })
   }
 
-  private def waiting(timer: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receiveMessagePartial({
-    case playMessage: PlayMsg => {
-      // play the next effect
-      play(playMessage, timer)
-
-      // set ourselves to waiting to play
-      playing(Seq(), timer)
-    }
-    case unexpected => {
-      logger.warn(s"Unexpected message: $unexpected")
-
-      waiting(timer)
-    }
-  })
-
-  private def playing(playMessages: Seq[PlayMsg],
-                      timer: TimerScheduler[Msg]): Behavior[Msg] = Behaviors.receiveMessagePartial({
-    case playMessage: PlayMsg => {
-      playing(playMessages :+ playMessage, timer)
-    }
-    case Ready => {
-      if (playMessages.nonEmpty) {
+  private def waiting(timer: TimerScheduler[Msg]): Behavior[Msg] =
+    Behaviors.receiveMessagePartial({
+      case playMessage: PlayMsg => {
         // play the next effect
-        play(playMessages.head, timer)
+        play(playMessage, timer)
 
         // set ourselves to waiting to play
-        playing(playMessages.tail, timer)
+        playing(Seq(), timer)
       }
-      else {
+      case unexpected => {
+        logger.warn(s"Unexpected message: $unexpected")
+
         waiting(timer)
       }
-    }
-  })
+    })
+
+  private def playing(playMessages: Seq[PlayMsg], timer: TimerScheduler[Msg]): Behavior[Msg] =
+    Behaviors.receiveMessagePartial({
+      case playMessage: PlayMsg => {
+        playing(playMessages :+ playMessage, timer)
+      }
+      case Ready => {
+        if (playMessages.nonEmpty) {
+          // play the next effect
+          play(playMessages.head, timer)
+
+          // set ourselves to waiting to play
+          playing(playMessages.tail, timer)
+        }
+        else {
+          waiting(timer)
+        }
+      }
+    })
 
   private def play(effect: PlayMsg, timer: TimerScheduler[Msg]): Unit = {
     effect match {
@@ -88,7 +90,7 @@ private[nanoleaf] class TempEffectBuffer(client: NanoleafClient)
         val tempEffect: EffectCommand = effect.effect
           .copy(duration = Some(effect.duration))
 
-        handleResponse(client.tempDisplay(tempEffect), client)
+        handleResponse(client.tempDisplay(tempEffect))
           .andThen({
             case _ => {
               // get our effect duration and add some buffer time

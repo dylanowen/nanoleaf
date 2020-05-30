@@ -14,13 +14,16 @@ import scala.language.postfixOps
   * @author dylan.owen
   * @since Feb-2018
   */
-sealed case class WifiClient(hostName: Option[String],
-                             mac: String,
-                             ip: Option[String],
-                             uptime: FiniteDuration,
-                             first_seen: Instant,
-                             last_seen: Instant,
-                             is_wired: Boolean) {
+sealed case class NetworkClient(
+    hostName: Option[String],
+    mac: String,
+    ip: Option[String],
+    uptime: FiniteDuration,
+    first_seen: Instant,
+    last_seen: Instant,
+    is_wired: Boolean
+) {
+
   override def toString: String = {
     val name: String = hostName
       .getOrElse(mac)
@@ -29,6 +32,7 @@ sealed case class WifiClient(hostName: Option[String],
 }
 
 trait WifiClientJsonSupport {
+
   implicit val decodeFiniteDuration: Decoder[FiniteDuration] = Decoder.decodeLong
     .emap((secondsValue: Long) => {
       Right(secondsValue seconds)

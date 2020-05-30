@@ -9,11 +9,12 @@ import akka.actor.typed.{ActorRef, Behavior}
 import com.dylowen.house.control.{ClientConfig, HouseState}
 import com.dylowen.house.nanoleaf.api._
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
-import com.dylowen.house.unifi.WifiClient
+import com.dylowen.house.unifi.NetworkClient
 import com.dylowen.house.utils._
 import com.typesafe.scalalogging.{LazyLogging, Logger}
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
@@ -41,9 +42,10 @@ object NanoleafControl {
   private val NewPhoneDuration: Int = 20
 
   object NonEmpty {
-    def unapply[T](seq: Seq[T]): Option[Seq[T]] = {
-      if (seq.nonEmpty) {
-        Some(seq)
+
+    def unapply[T](set: Set[T]): Option[Set[T]] = {
+      if (set.nonEmpty) {
+        Some(set)
       }
       else {
         None
@@ -52,6 +54,7 @@ object NanoleafControl {
   }
 
   private object InternalState {
+
     val Initial: InternalState = InternalState(
       manualModeInstant = None,
       action = NoAction,
@@ -63,9 +66,12 @@ object NanoleafControl {
     )
   }
 
-  private case class InternalState(manualModeInstant: Option[Instant],
-                                   action: NanoleafAction,
-                                   lightState: NanoleafState) {
+  private case class InternalState(
+      manualModeInstant: Option[Instant],
+      action: NanoleafAction,
+      lightState: NanoleafState
+  ) {
+
     def manualMode: Boolean = {
       manualModeInstant
         .exists(_.plus(6, ChronoUnit.HOURS).isAfter(Instant.now()))
@@ -74,10 +80,12 @@ object NanoleafControl {
 
   private val NoStateChange: NextStateChanges = NextStateChanges()
 
-  private case class NextStateChanges(manualMode: Option[Boolean] = None,
-                                      action: Option[NanoleafAction] = None,
-                                      lightStateOverride: Option[NanoleafState] = None,
-                                      tempEffects: Seq[TempEffectBuffer.PlayMsg] = Seq()) {
+  private case class NextStateChanges(
+      manualMode: Option[Boolean] = None,
+      action: Option[NanoleafAction] = None,
+      lightStateOverride: Option[NanoleafState] = None,
+      tempEffects: Seq[TempEffectBuffer.PlayMsg] = Seq()
+  ) {
 
     private type Updater = InternalState => InternalState
 
@@ -113,9 +121,10 @@ object NanoleafControl {
 
 }
 
-class NanoleafControl(address: NanoleafAddress,
-                      private val config: NanoleafConfig)
-                     (implicit override val system: HouseSystem) extends ResponseHandler with LazyLogging {
+class NanoleafControl(address: NanoleafAddress, private val config: NanoleafConfig)(
+    implicit override val system: HouseSystem
+) extends ResponseHandler
+    with LazyLogging {
 
   import NanoleafControl._
   import system.executionContext
@@ -124,11 +133,15 @@ class NanoleafControl(address: NanoleafAddress,
 
   private val UpdateInterval: FiniteDuration = system.config.getFiniteDuration("nanoleaf.update-interval")
 
-  private val myPhonesEffects: Map[String, EffectCommand] = ClientConfig.configs(system.config.getConfig("clients.phones"))
+  private val myPhonesEffects: Map[String, EffectCommand] = ClientConfig
+    .configs(system.config.getConfig("clients.phones"))
     .map((entry: (String, ClientConfig)) => {
       entry._1 -> DefinedEffect(entry._2.effect)
     })
-  private val unknownClientEffect: EffectCommand = DefinedEffect(ClientConfig(system.config.getConfig("clients.unknown-client")).effect)
+
+  private val unknownClientEffect: EffectCommand = DefinedEffect(
+    ClientConfig(system.config.getConfig("clients.unknown-client")).effect
+  )
 
   private val client: NanoleafClient = NanoleafClient(address, config.auth)
 
@@ -145,13 +158,12 @@ class NanoleafControl(address: NanoleafAddress,
 
       waiting(
         InternalState.Initial,
-        buffer,
+        buffer
       )
     })
   }
 
-  private def waiting(internalState: InternalState,
-                      buffer: ActorRef[TempEffectBuffer.Msg]): Behavior[Msg] = {
+  private def waiting(internalState: InternalState, buffer: ActorRef[TempEffectBuffer.Msg]): Behavior[Msg] = {
     Behaviors.receivePartial[Msg]({
       case (ctx, Tick(houseState)) => {
         // request our light state and move to waiting for a response
@@ -177,17 +189,21 @@ class NanoleafControl(address: NanoleafAddress,
     })
   }
 
-  private def gettingState(houseState: HouseState,
-                           internalState: InternalState,
-                           buffer: ActorRef[TempEffectBuffer.Msg]): Behavior[Msg] = {
+  private def gettingState(
+      houseState: HouseState,
+      internalState: InternalState,
+      buffer: ActorRef[TempEffectBuffer.Msg]
+  ): Behavior[Msg] = {
     Behaviors.receiveMessagePartial[Msg]({
       case ReceivedLightState(lightState) => {
 
         // log our light state
         logger.debug(s"state: $lightState")
-        logger.debug(s"internal-state" +
-          s" manualMode: ${internalState.manualMode}" +
-          s" action: ${internalState.action.getClass.getSimpleName}")
+        logger.debug(
+          s"internal-state" +
+            s" manualMode: ${internalState.manualMode}" +
+            s" action: ${internalState.action.getClass.getSimpleName}"
+        )
 
         val stateDelta: NextStateChanges = getNextStateActions(lightState, houseState, internalState)
 
@@ -196,7 +212,7 @@ class NanoleafControl(address: NanoleafAddress,
           // log what action we're running
           logger.info(s"Running action: $action")
 
-          actOnClient(action, client, buffer)
+          actOnClient(action, client)
         })
 
         // if we have any temp effects run them
@@ -208,14 +224,14 @@ class NanoleafControl(address: NanoleafAddress,
         // set our next action if we have one or use our last one
         waiting(
           internalState = nextState,
-          buffer = buffer,
+          buffer = buffer
         )
       }
       case MissingLightState => {
         // the state wasn't updated so don't do anything
         waiting(
           internalState = internalState,
-          buffer = buffer,
+          buffer = buffer
         )
       }
       case unexpected => {
@@ -227,9 +243,9 @@ class NanoleafControl(address: NanoleafAddress,
   }
 
   private def getLightState(client: NanoleafClient): Future[Option[NanoleafState]] = {
-    val brightnessRequest: Future[Option[Brightness]] = handleResponse(client.brightness, client)
-    val isOnRequest: Future[Option[Boolean]] = handleResponse(client.isOn, client)
-    val effectRequest: Future[Option[String]] = handleResponse(client.effect, client)
+    val brightnessRequest: Future[Option[Brightness]] = handleResponse(client.brightness)
+    val isOnRequest: Future[Option[Boolean]] = handleResponse(client.isOn)
+    val effectRequest: Future[Option[String]] = handleResponse(client.effect)
 
     for {
       maybeBrightness <- brightnessRequest
@@ -244,19 +260,21 @@ class NanoleafControl(address: NanoleafAddress,
     }
   }
 
-  private def getNextStateActions(lightState: NanoleafState,
-                                  houseState: HouseState,
-                                  internalState: InternalState): NextStateChanges = {
+  private def getNextStateActions(
+      lightState: NanoleafState,
+      houseState: HouseState,
+      internalState: InternalState
+  ): NextStateChanges = {
     (houseState, lightState, internalState) match {
       // if we don't have any phones and our light is on, turn it off
-      case (HouseState(Seq(), _, _, _), NanoleafState(_, true, _), _) => {
+      case (HouseState.AtHomePhones(Seq()), NanoleafState(_, true, _), _) => {
         NextStateChanges(
           action = Some(LightOff)
         )
       }
 
       // if we turned our light off and there's a phone turn it on
-      case (HouseState(NonEmpty(phones), _, _, _), NanoleafState(_, false, _), InternalState(_, LightOff, _)) => {
+      case (HouseState.AtHomePhones(NonEmpty(phones)), NanoleafState(_, false, _), InternalState(_, LightOff, _)) => {
         // turn the lights on, then wait and run our phone announcements
         NextStateChanges(
           action = Some(LightOn),
@@ -266,19 +284,19 @@ class NanoleafControl(address: NanoleafAddress,
 
       // if our light is on
       case (_, NanoleafState(brightness, true, _), _) => {
-        if (houseState.newPhones.nonEmpty) {
+        val tempEffects: mutable.Buffer[TempEffectBuffer.PlayMsg] = mutable.Buffer()
+
+        if (houseState.arrivedHomePhones.nonEmpty) {
           // check if someone just came home
-          NextStateChanges(
-            tempEffects = knownPhoneEffects(houseState.newPhones)
-          )
+          tempEffects ++= knownPhoneEffects(houseState.arrivedHomePhones)
         }
-        else if (houseState.newWirelessClients.nonEmpty) {
+
+        if (houseState.arrivedUnknownWirelessClients.nonEmpty) {
           // check if a random wifi device just joined the network
-          NextStateChanges(
-            tempEffects = Seq(TempEffectBuffer.TempEffect(unknownClientEffect, NewPhoneDuration))
-          )
+          tempEffects += TempEffectBuffer.TempEffect(unknownClientEffect, NewPhoneDuration)
         }
-        else if (config.manualMode.contains(lightState.effect)) {
+
+        if (config.manualMode.contains(lightState.effect)) {
           val nextManualMode: Boolean = !internalState.manualMode
 
           logger.debug(s"Setting Manual Mode: $nextManualMode")
@@ -299,7 +317,7 @@ class NanoleafControl(address: NanoleafAddress,
             tempEffects = Seq(
               TempEffectBuffer.DefaultWait,
               TempEffectBuffer.TempEffect(confirmManualMode, 2)
-            )
+            ) ++ tempEffects
           )
         }
         else {
@@ -323,11 +341,11 @@ class NanoleafControl(address: NanoleafAddress,
             }
             else {
               // we're in manual mode so don't do anything
-              NoStateChange
+              NoStateChange.copy(tempEffects = tempEffects.to)
             }
           }
           else {
-            NoStateChange
+            NoStateChange.copy(tempEffects = tempEffects.to)
           }
         }
       }
@@ -335,23 +353,26 @@ class NanoleafControl(address: NanoleafAddress,
     }
   }
 
-  private def actOnClient(action: NanoleafAction, client: NanoleafClient, buffer: ActorRef[TempEffectBuffer.Msg]): Unit = {
+  private def actOnClient(
+      action: NanoleafAction,
+      client: NanoleafClient
+  ): Unit = {
     val response: Future[Any] = action match {
 
       case LightBrightness(brightness) => {
-        handleResponse(client.setBrightness(brightness, Some(UpdateInterval)), client)
+        handleResponse(client.setBrightness(brightness, Some(UpdateInterval)))
       }
 
       case LightOn => {
-        handleResponse(client.setState(true), client)
+        handleResponse(client.setState(true))
       }
 
       case LightOff => {
-        handleResponse(client.setState(false), client)
+        handleResponse(client.setState(false))
       }
 
       case LightEffect(effect) => {
-        handleResponse(client.selectEffect(effect), client)
+        handleResponse(client.selectEffect(effect))
       }
 
       case NoAction => Future.unit
@@ -365,12 +386,13 @@ class NanoleafControl(address: NanoleafAddress,
     })
   }
 
-  private def knownPhoneEffects(phones: Seq[WifiClient]): Seq[TempEffectBuffer.PlayMsg] = {
+  private def knownPhoneEffects(phones: Set[NetworkClient]): Seq[TempEffectBuffer.PlayMsg] = {
     // get the duration for our effects
-    val clientDuration: Int = NewPhoneDuration / phones.length
+    val clientDuration: Int = NewPhoneDuration / phones.size
 
     // find an effect for the phones or get a default one
     phones
+      .to[Seq]
       .map(_.mac)
       .map(myPhonesEffects.getOrElse(_, DefinedEffect.Default))
       .map(TempEffectBuffer.TempEffect(_, clientDuration))

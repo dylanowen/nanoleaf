@@ -1,6 +1,5 @@
 enablePlugins(JavaServerAppPackaging)
 enablePlugins(DebianPlugin)
-enablePlugins(SystemdPlugin)
 
 name := "nanoleaf"
 organization := "com.dylowen"
@@ -21,6 +20,7 @@ libraryDependencies += Dependencies.JmDNS
 libraryDependencies ++= Dependencies.Sttp
 libraryDependencies ++= Dependencies.Circe
 libraryDependencies ++= Dependencies.Logging
+libraryDependencies ++= Dependencies.ScalaTest
 
 mainClass in Compile := Some("com.dylowen.house.HouseApp")
 

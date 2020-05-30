@@ -25,19 +25,20 @@ object HouseApp extends LazyLogging {
     actorSystem ! BootstrapStart(system)
   }
 
-  private def bootstrap(started: Boolean): Behavior[BootstrapStart] = Behaviors.receivePartial({
-    case (ctx, BootstrapStart(system)) => {
-      if (!started) {
-        implicit val houseSystem: HouseSystem = system
-        val houseControl: HouseControl = new HouseControl()
+  private def bootstrap(started: Boolean): Behavior[BootstrapStart] =
+    Behaviors.receivePartial({
+      case (ctx, BootstrapStart(system)) => {
+        if (!started) {
+          implicit val houseSystem: HouseSystem = system
+          val houseControl: HouseControl = new HouseControl()
 
-        ctx.spawn(houseControl.behavior, "house-control")
+          ctx.spawn(houseControl.behavior, "house-control")
 
-        Behaviors.same
+          bootstrap(true)
+        }
+        else {
+          throw new RuntimeException("Can't start the house multiple times")
+        }
       }
-      else {
-        throw new RuntimeException("Can't start the house multiple times")
-      }
-    }
-  })
+    })
 }

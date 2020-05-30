@@ -3,8 +3,6 @@ package nanoleaf
 
 import java.time.Instant
 
-import com.dylowen.house.unifi.WifiClient
-
 /**
   * TODO add description
   *

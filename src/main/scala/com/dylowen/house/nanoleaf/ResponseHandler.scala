@@ -20,8 +20,7 @@ trait ResponseHandler {
 
   import system.executionContext
 
-  protected def handleResponse[T](response: Future[Either[ClientError, T]],
-                                  client: NanoleafClient): Future[Option[T]] = {
+  protected def handleResponse[T](response: Future[Either[ClientError, T]]): Future[Option[T]] = {
     response
       .map({
         case Right(t) => Some(t)

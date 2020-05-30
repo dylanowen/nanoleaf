@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContextExecutor
   * @since Jan-2018
   */
 case class HouseSystem(private val _actorSystem: typed.ActorSystem[Nothing]) extends LazyLogging {
+
   @inline
   implicit def typedSystem: ActorSystem[Nothing] = _actorSystem
 

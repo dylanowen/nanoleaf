@@ -61,4 +61,9 @@ object Dependencies {
     "org.apache.logging.log4j" % "log4j-slf4j-impl" % Versions.Log4j,
     "org.slf4j" % "slf4j-api" % Versions.Slf4j
   )
+
+  lazy val ScalaTest: Seq[ModuleID] = Seq(
+    "org.scalactic" %% "scalactic" % "3.1.2",
+    "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+  )
 }

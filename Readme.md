@@ -20,10 +20,10 @@
 `sudo journalctl -u nanoleaf`
 
 ### Start / Stop / Restart / Status
-`sudo systemctl start nanoleaf`
-`sudo systemctl stop nanoleaf`
-`sudo systemctl restart nanoleaf`
-`sudo systemctl status nanoleaf`
+* `sudo systemctl start nanoleaf`
+* `sudo systemctl stop nanoleaf`
+* `sudo systemctl restart nanoleaf`
+* `sudo systemctl status nanoleaf`
 
 ### Service File
 `/etc/systemd/system/multi-user.target.wants/nanoleaf.service`
