@@ -21,6 +21,7 @@ libraryDependencies ++= Dependencies.Sttp
 libraryDependencies ++= Dependencies.Circe
 libraryDependencies ++= Dependencies.Logging
 libraryDependencies ++= Dependencies.ScalaTest
+libraryDependencies += Dependencies.Mockito
 
 mainClass in Compile := Some("com.dylowen.house.HouseApp")
 

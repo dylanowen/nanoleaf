@@ -41,18 +41,6 @@ object NanoleafControl {
   // how long we play a new phone effect
   private val NewPhoneDuration: Int = 20
 
-  object NonEmpty {
-
-    def unapply[T](set: Set[T]): Option[Set[T]] = {
-      if (set.nonEmpty) {
-        Some(set)
-      }
-      else {
-        None
-      }
-    }
-  }
-
   private object InternalState {
 
     val Initial: InternalState = InternalState(
@@ -66,7 +54,7 @@ object NanoleafControl {
     )
   }
 
-  private case class InternalState(
+  private[nanoleaf] case class InternalState(
       manualModeInstant: Option[Instant],
       action: NanoleafAction,
       lightState: NanoleafState
@@ -80,7 +68,7 @@ object NanoleafControl {
 
   private val NoStateChange: NextStateChanges = NextStateChanges()
 
-  private case class NextStateChanges(
+  private[nanoleaf] case class NextStateChanges(
       manualMode: Option[Boolean] = None,
       action: Option[NanoleafAction] = None,
       lightStateOverride: Option[NanoleafState] = None,
@@ -260,21 +248,22 @@ class NanoleafControl(address: NanoleafAddress, private val config: NanoleafConf
     }
   }
 
-  private def getNextStateActions(
+  private[nanoleaf] def getNextStateActions(
       lightState: NanoleafState,
       houseState: HouseState,
       internalState: InternalState
   ): NextStateChanges = {
     (houseState, lightState, internalState) match {
       // if we don't have any phones and our light is on, turn it off
-      case (HouseState.AtHomePhones(Seq()), NanoleafState(_, true, _), _) => {
+      case (HouseState.AtHomePhones(phones), NanoleafState(_, true, _), _) if phones.isEmpty => {
         NextStateChanges(
           action = Some(LightOff)
         )
       }
 
       // if we turned our light off and there's a phone turn it on
-      case (HouseState.AtHomePhones(NonEmpty(phones)), NanoleafState(_, false, _), InternalState(_, LightOff, _)) => {
+      case (HouseState.AtHomePhones(phones), NanoleafState(_, false, _), InternalState(_, LightOff, _))
+          if phones.nonEmpty => {
         // turn the lights on, then wait and run our phone announcements
         NextStateChanges(
           action = Some(LightOn),

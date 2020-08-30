@@ -35,7 +35,8 @@ class HouseStateTest extends AnyFlatSpec with Matchers {
     var state: HouseState = new HouseState(
       Set(
         networkClient("reconnecting", lastSeen = Instant.now()),
-        networkClient("new", lastSeen = Instant.now())
+        networkClient("new", lastSeen = Instant.now()),
+        networkClient("other", lastSeen = Instant.now().minusMillis((15 seconds).toMillis))
       ),
       Set.empty,
       Set(
@@ -54,7 +55,8 @@ class HouseStateTest extends AnyFlatSpec with Matchers {
     state = state.next(
       WifiClients(
         Seq(
-          networkClient("newest", lastSeen = Instant.now())
+          networkClient("newest", lastSeen = Instant.now()),
+          networkClient("other", lastSeen = Instant.now())
         ),
         Seq.empty
       )
@@ -63,6 +65,7 @@ class HouseStateTest extends AnyFlatSpec with Matchers {
     state.arrivedHomePhones.map(_.mac) shouldNot contain("gone")
     state.arrivedHomePhones.map(_.mac) shouldNot contain("reconnecting")
     state.arrivedHomePhones.map(_.mac) shouldNot contain("new")
+    state.arrivedHomePhones.map(_.mac) shouldNot contain("other")
     state.arrivedHomePhones.map(_.mac) should contain("newest")
   }
 

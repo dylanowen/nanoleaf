@@ -3,7 +3,7 @@ package unifi
 
 import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.circe.asJson
-import com.softwaremill.sttp.{Response, SttpBackend}
+import com.softwaremill.sttp.{DeserializationError, Response, SttpBackend}
 import io.circe
 import io.circe.generic.auto._
 
@@ -29,10 +29,11 @@ object GetClients extends WifiClientJsonSupport {
       .request(path = s"/api/s/$site/stat/sta")
       .response(asJson[UnifiRPCJson])
       .send()
-      .map((response: Response[Either[circe.Error, UnifiRPCJson]]) => {
+      .map((response: Response[Either[DeserializationError[circe.Error], UnifiRPCJson]]) => {
         response.body match {
           case Right(body) => {
-            body
+            body.left
+              .map(_.error)
               .flatMap(_.data.as[Seq[NetworkClient]])
               .left
               .map((error: circe.Error) => {

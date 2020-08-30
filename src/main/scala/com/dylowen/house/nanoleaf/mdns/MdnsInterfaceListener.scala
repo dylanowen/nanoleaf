@@ -28,14 +28,13 @@ private[mdns] object MdnsInterfaceListener extends LazyLogging {
   /**
     * Actor API
     */
-  private[mdns] sealed trait Message
+  sealed private[mdns] trait Message
 
   private case class ServiceEvent(event: jmdns.ServiceEvent) extends Message {
     def forParent: NanoleafMdnsService.ServiceEvent = NanoleafMdnsService.ServiceEvent(event)
   }
 
   private case class MDNSError(errorMessage: String) extends Message
-
 
   def actors(context: ActorContext[NanoleafMdnsService.Msg]): Seq[ActorRef[Message]] = {
     getValidInterfaces
@@ -53,9 +52,11 @@ private[mdns] object MdnsInterfaceListener extends LazyLogging {
       })
   }
 
-  private def interfaceActor(hostAddress: InetAddress,
-                             networkInterface: NetworkInterface,
-                             parent: ActorRef[NanoleafMdnsService.Msg]): Behavior[Message] = {
+  private def interfaceActor(
+      hostAddress: InetAddress,
+      networkInterface: NetworkInterface,
+      parent: ActorRef[NanoleafMdnsService.Msg]
+  ): Behavior[Message] = {
     Behaviors.setup((setup: ActorContext[Message]) => {
 
       val jmDNS: JmDNS = JmDNS.create(hostAddress)
@@ -66,35 +67,37 @@ private[mdns] object MdnsInterfaceListener extends LazyLogging {
 
       logger.debug(s"Registered ${NanoleafMdnsService.NanoleafServiceType} listener on $hostAddress")
 
-      Behaviors.receive[Message]((_: ActorContext[Message], message: Message) => {
-        message match {
-          case event: ServiceEvent => {
-            parent ! event.forParent
+      Behaviors
+        .receive[Message]((_: ActorContext[Message], message: Message) => {
+          message match {
+            case event: ServiceEvent => {
+              parent ! event.forParent
+
+              Behaviors.same
+            }
+            case MDNSError(errorMessage) => {
+              logger.warn(errorMessage)
+
+              // shutdown this actor since we received an error
+              Behaviors.stopped
+            }
+          }
+        })
+        .receiveSignal({
+          case (_, PostStop) => {
+            jmDNS.close()
+
+            logger.debug(s"Removed ${NanoleafMdnsService.NanoleafServiceType} listener on $hostAddress")
+            Behaviors.same
+          }
+          case (_, terminated: Terminated) => {
+            jmDNS.close()
+
+            logger.error("Exception: ", terminated)
 
             Behaviors.same
           }
-          case MDNSError(errorMessage) => {
-            logger.warn(errorMessage)
-
-            // shutdown this actor since we received an error
-            Behaviors.stopped
-          }
-        }
-      }).receiveSignal({
-        case (_, PostStop) => {
-          jmDNS.close()
-
-          logger.debug(s"Removed ${NanoleafMdnsService.NanoleafServiceType} listener on $hostAddress")
-          Behaviors.same
-        }
-        case (_, terminated: Terminated) => {
-          jmDNS.close()
-
-          logger.error("Exception: ", terminated.failure)
-
-          Behaviors.same
-        }
-      })
+        })
     })
   }
 
@@ -107,6 +110,7 @@ private[mdns] object MdnsInterfaceListener extends LazyLogging {
   }
 
   private class SelfDelegate(hostAddress: InetAddress, self: ActorRef[Message]) extends Delegate {
+
     override def cannotRecoverFromIOError(dns: JmDNS, infos: util.Collection[ServiceInfo]): Unit = {
       // tell our actor we're hitting exception
       self ! MDNSError(s"mDNS IO Errors, stopping interface: $hostAddress")

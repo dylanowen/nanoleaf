@@ -1,22 +1,20 @@
 import sbt._
 
 /**
-  * TODO add description
-  *
   * @author dylan.owen
   * @since Jul-2018
   */
 object Dependencies {
 
   object Versions {
-    val Akka: String = "2.5.14"
-    val AkkaHttp: String = "10.1.3"
+    val Akka: String = "2.6.8"
+    val AkkaHttp: String = "10.2.0"
 
     val TypesafeConfig: String = "1.3.1"
 
     val Hola: String = "0.2.2"
 
-    val Sttp: String = "1.2.3"
+    val Sttp: String = "1.7.2"
 
     val Circe: String = "0.9.3"
 
@@ -24,6 +22,8 @@ object Dependencies {
     val Slf4j: String = "1.7.25"
 
     val Jackson: String = "2.8.8"
+
+    val ScalaTest: String = "3.2.2"
   }
 
   lazy val Akka: Seq[ModuleID] = Seq(
@@ -63,7 +63,9 @@ object Dependencies {
   )
 
   lazy val ScalaTest: Seq[ModuleID] = Seq(
-    "org.scalactic" %% "scalactic" % "3.1.2",
-    "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+    "org.scalatest" %% "scalatest" % Versions.ScalaTest % Test,
+    "org.scalatestplus" %% "mockito-3-4" % s"${Versions.ScalaTest}.0" % Test
   )
+
+  lazy val Mockito: ModuleID = "org.mockito" % "mockito-core" % "3.5.7" % Test
 }

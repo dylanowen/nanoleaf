@@ -1,7 +1,6 @@
 package com.dylowen.house
 package nanoleaf.api
 
-
 import com.dylowen.house.nanoleaf.mdns.NanoleafAddress
 import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.circe._
@@ -34,8 +33,8 @@ object NanoleafClient {
 
 }
 
-case class NanoleafClient(address: NanoleafAddress, auth: String)
-                         (implicit nanoSystem: HouseSystem) extends LazyLogging {
+case class NanoleafClient(address: NanoleafAddress, auth: String)(implicit nanoSystem: HouseSystem)
+    extends LazyLogging {
 
   import NanoleafClient._
   import nanoSystem.executionContext
@@ -127,18 +126,21 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
       })
   }
 
-  private def request(method: Method = Method.GET,
-                      path: String): Request[String, Nothing] = {
+  private def request(method: Method = Method.GET, path: String): Request[String, Nothing] = {
     request(method, path, (r: Request[String, Nothing]) => r)
   }
 
-  private def request[T](method: Method,
-                         path: String,
-                         more: Request[String, Nothing] => Request[T, Nothing]): Request[T, Nothing] = {
+  private def request[T](
+      method: Method,
+      path: String,
+      more: Request[String, Nothing] => Request[T, Nothing]
+  ): Request[T, Nothing] = {
     val rawUri: String = address.url + path.replace("<auth>", auth)
 
-    val request: Request[T, Nothing] = more(sttp
-      .copy[Id, String, Nothing](uri = uri"$rawUri", method = method))
+    val request: Request[T, Nothing] = more(
+      sttp
+        .copy[Id, String, Nothing](uri = uri"$rawUri", method = method)
+    )
 
     logger.info("Nanoleaf Request: " + request)
 
@@ -146,38 +148,40 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)
   }
 
   implicit class EnhancedFuture[T](future: Future[Either[ClientError, T]]) {
+
     def clientRecover: Future[Either[ClientError, T]] = {
       future.recoverWith({
         case NonFatal(t) => {
-          Future.successful(Left(ClientError(
-            message = Some("Request failed"),
-            throwable = Some(t))
-          ))
+          Future.successful(Left(ClientError(message = Some("Request failed"), throwable = Some(t))))
         }
       })
     }
   }
 
-  implicit class EnhancedParseFuture[T](future: Future[Response[Either[circe.Error, T]]]) {
+  implicit class EnhancedParseFuture[T](future: Future[Response[Either[DeserializationError[circe.Error], T]]]) {
+
     def clientMapError: Future[Either[ClientError, T]] = {
-      future.map((response: Response[Either[circe.Error, T]]) => {
-        response.body match {
-          case Right(body) => {
-            body
-              .left
-              .map((error: circe.Error) => {
+      future
+        .map((response: Response[Either[DeserializationError[circe.Error], T]]) => {
+          response.body match {
+            case Right(body) => {
+              body.left
+                .map((error: DeserializationError[circe.Error]) => {
+                  ClientError(
+                    message = Some("Parsing failure: " + error.toString),
+                    response = Some(response)
+                  )
+                })
+            }
+            case Left(error) =>
+              Left(
                 ClientError(
-                  message = Some("Parsing failure: " + error.toString),
+                  message = Some("Request error: " + error.toString),
                   response = Some(response)
                 )
-              })
+              )
           }
-          case Left(error) => Left(ClientError(
-            message = Some("Request error: " + error.toString),
-            response = Some(response)
-          ))
-        }
-      })
+        })
         .clientRecover
     }
   }

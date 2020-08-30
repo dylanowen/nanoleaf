@@ -33,7 +33,7 @@ object HouseState {
 class HouseState private[control] (
     private val phones: Set[NetworkClient],
     private val wirelessClients: Set[NetworkClient],
-    private val lastAtHomePhones: Set[NetworkClient],
+    private val lastPhones: Set[NetworkClient],
     private val lastUnknownWirelessClients: Set[NetworkClient],
     private val lastSeenClientThreshold: FiniteDuration,
     private val unknownClientThreshold: FiniteDuration = 14 days
@@ -52,7 +52,7 @@ class HouseState private[control] (
 
     // if the phone is home, it didn't just arrive home, and has been gone double the threshold cutoff time
     atHomePhones.filter((client: NetworkClient) => {
-      !lastAtHomePhones.find(_.mac == client.mac).exists(_.last_seen.isAfter(arrivedCutoff))
+      !lastPhones.find(_.mac == client.mac).exists(_.last_seen.isAfter(arrivedCutoff))
     })
   }
 
@@ -80,7 +80,7 @@ class HouseState private[control] (
     new HouseState(
       wifiClients.phones.to,
       wifiClients.wirelessClients.to,
-      atHomePhones,
+      phones,
       atHomeUnknownWirelessClients,
       lastSeenClientThreshold
     )
@@ -88,7 +88,7 @@ class HouseState private[control] (
 
   override def toString: String = {
     s"${getClass.getSimpleName}(" +
-      s"phones: ${atHomePhones.size} Δ${atHomePhones.size - lastAtHomePhones.size} " +
+      s"phones: ${atHomePhones.size} " +
       s"arrived phones: ${arrivedHomePhones.size} " +
       s"unknown clients: ${atHomeUnknownWirelessClients.size} Δ${atHomeUnknownWirelessClients.size - lastUnknownWirelessClients.size} " +
       s"arrived unknown clients: ${arrivedUnknownWirelessClients.size}" +
