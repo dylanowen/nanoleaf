@@ -42,3 +42,6 @@ ssl-config {
     ]
   }
 }
+
+# give the loggers more time to startup
+akka.logger-startup-timeout = 1minute

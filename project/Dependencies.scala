@@ -16,10 +16,10 @@ object Dependencies {
 
     val Sttp: String = "1.7.2"
 
-    val Circe: String = "0.9.3"
+    val Circe: String = "0.13.0"
 
-    val Log4j: String = "2.8.2"
-    val Slf4j: String = "1.7.25"
+    val Log4j: String = "2.13.3"
+    val Slf4j: String = "1.7.30"
 
     val Jackson: String = "2.8.8"
 
