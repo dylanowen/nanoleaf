@@ -40,6 +40,7 @@ object ClientConfig {
     var configBuilder: DefaultAsyncHttpClientConfig.Builder = new DefaultAsyncHttpClientConfig.Builder()
       .setConnectTimeout(options.connectionTimeout.toMillis.toInt)
       .setSslContext(nanoSystem.sslContext)
+      .setDisableHttpsEndpointIdentificationAlgorithm(nanoSystem.sslConfig.loose.disableHostnameVerification)
       .setMaxConnections(8)
       .setMaxConnectionsPerHost(4)
       .setPooledConnectionIdleTimeout(100)

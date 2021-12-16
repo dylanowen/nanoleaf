@@ -18,7 +18,7 @@ object Dependencies {
 
     val Circe: String = "0.13.0"
 
-    val Log4j: String = "2.13.3"
+    val Log4j: String = "2.16.0"
     val Slf4j: String = "1.7.30"
 
     val Jackson: String = "2.8.8"
