@@ -1,5 +1,4 @@
-enablePlugins(JavaServerAppPackaging)
-enablePlugins(DebianPlugin)
+enablePlugins(JavaServerAppPackaging, DebianPlugin, SystemdPlugin)
 
 name := "nanoleaf"
 organization := "com.dylowen"
