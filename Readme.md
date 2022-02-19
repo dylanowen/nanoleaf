@@ -42,3 +42,7 @@
 http://www.firewall.cx/networking-topics/protocols/domain-name-system-dns/160-protocols-dns-query.html
 https://github.com/posicks/mdnsjava/tree/6f304c4f4a36b92d3a73be31820bbd9f02615a8f/mdnsjava/src/main/java/net/posick/mDNS
 https://doc.akka.io/docs/akka/2.5/io-udp.html
+
+## Generating an Auth Token
+1. Hold the power button for 7 seconds until the LED starts flashing in a pattern
+2. `curl -X POST http://192.168.x.x:16021/api/v1/new`
