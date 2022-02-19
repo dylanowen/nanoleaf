@@ -36,7 +36,7 @@ object NanoleafMdnsService extends LazyLogging {
   private val InterfaceRefreshInterval: FiniteDuration = 30 minutes
 
   private[nanoleaf] val NanoleafServiceType: String = "_nanoleafapi._tcp.local."
-  private val NameRegex: Regex = "([abcdef0-9]{2}:[abcdef0-9]{2}:[abcdef0-9]{2})".r
+  private val NameRegex: Regex = "([A-Fa-f0-9]{2}:[A-Fa-f0-9]{2}:[A-Fa-f0-9]{2})".r
 
   val behavior: Behavior[Msg] = Behaviors.supervise(
     Behaviors.withTimers((timers: TimerScheduler[Msg]) => {
@@ -61,7 +61,7 @@ object NanoleafMdnsService extends LazyLogging {
       val foundLight: Option[NanoleafAddress] = for {
         id <- NameRegex.findFirstIn(name)
         url <- info.getURLs().headOption
-      } yield NanoleafAddress(id, name, url)
+      } yield NanoleafAddress(id.toLowerCase, name, url)
 
       foundLight
         .map((light: NanoleafAddress) => {
