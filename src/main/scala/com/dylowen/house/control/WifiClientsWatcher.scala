@@ -89,7 +89,7 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
             clients
           })
 
-        logger.debug(s"Filtered Unifi Clients: $nextClients")
+        logger.trace(s"Filtered Unifi Clients: $nextClients")
 
         // tell our parent about the current clients
         parent ! nextClients
