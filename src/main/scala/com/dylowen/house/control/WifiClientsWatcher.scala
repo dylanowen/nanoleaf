@@ -75,15 +75,21 @@ class WifiClientsWatcher(implicit system: HouseSystem) extends LazyLogging {
 
         Behaviors.same
       }
-      case (_, SetWifiClients(response)) => {
+      case (_, SetWifiClients(wifiClientsResponse)) => {
         // schedule our next client refresh
         timers.startSingleTimer(RefreshWifiClientsInterval, RefreshWifiClients, RefreshWifiClientsInterval)
 
-        val nextClients: WifiClients = response
-          .getOrElse({
-            // if we didn't find any clients, filter our existing known ones by time
-            filterWifiClients(clients.phones ++ clients.wirelessClients)
+        val nextClients: WifiClients = wifiClientsResponse
+          .map({
+            case WifiClients(nextPhones, nextWirelessClients) => clients.update(nextPhones, nextWirelessClients)
           })
+          .getOrElse({
+            logger.debug("Didn't find any Unifi Clients")
+            // if we didn't find any clients, reuse our old ones
+            clients
+          })
+
+        logger.debug(s"Filtered Unifi Clients: $nextClients")
 
         // tell our parent about the current clients
         parent ! nextClients

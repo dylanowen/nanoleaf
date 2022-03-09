@@ -4,6 +4,7 @@ package unifi
 import com.dylowen.house.utils.{ClientConfig, ClientError}
 import com.softwaremill.sttp.circe.asJson
 import com.softwaremill.sttp.{DeserializationError, Response, SttpBackend}
+import com.typesafe.scalalogging.LazyLogging
 import io.circe
 import io.circe.generic.auto._
 
@@ -16,7 +17,7 @@ import scala.util.control.NonFatal
   * @author dylan.owen
   * @since Feb-2018
   */
-object GetClients extends WifiClientJsonSupport {
+object GetClients extends WifiClientJsonSupport with LazyLogging {
 
   def apply(auth: UnifiAuthorization, site: String = "default")(
       implicit nanoSystem: HouseSystem

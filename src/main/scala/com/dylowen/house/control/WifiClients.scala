@@ -16,4 +16,17 @@ object WifiClients {
   def apply(): WifiClients = Empty
 }
 
-case class WifiClients(phones: Seq[NetworkClient], wirelessClients: Seq[NetworkClient])
+case class WifiClients(phones: Seq[NetworkClient], wirelessClients: Seq[NetworkClient]) {
+
+  def update(newPhones: Seq[NetworkClient], newWirelessClients: Seq[NetworkClient]): WifiClients = {
+    def macMap(clients: Seq[NetworkClient]): Map[String, NetworkClient] = {
+      clients.map(client => client.mac -> client).toMap
+    }
+
+    // run our update as additive
+    WifiClients(
+      (macMap(phones) ++ macMap(newPhones)).values.to,
+      (macMap(wirelessClients) ++ macMap(newWirelessClients)).values.to
+    )
+  }
+}

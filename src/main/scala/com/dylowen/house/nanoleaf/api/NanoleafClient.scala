@@ -142,7 +142,7 @@ case class NanoleafClient(address: NanoleafAddress, auth: String)(implicit nanoS
         .copy[Id, String, Nothing](uri = uri"$rawUri", method = method)
     )
 
-    logger.info("Nanoleaf Request: " + request)
+    logger.debug("Nanoleaf Request: " + request)
 
     request
   }
